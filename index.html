@@ -1,1 +1,429 @@
-//
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>課程測驗｜數據戰情看板</title>
+
+  <!-- Chart.js：統計圖表 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-soft: #f0f3f8;
+      --text: #172033;
+      --muted: #687386;
+      --border: #e3e8f0;
+      --accent: #4169e1;
+      --accent-soft: #e9efff;
+      --green: #16865b;
+      --shadow: 0 8px 28px rgba(28, 43, 75, .06);
+    }
+
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #111722;
+      --surface: #1a2432;
+      --surface-soft: #222e3e;
+      --text: #edf2fa;
+      --muted: #a3afc0;
+      --border: #303d50;
+      --accent: #8ba7ff;
+      --accent-soft: #293858;
+      --green: #5bd3a1;
+      --shadow: 0 8px 28px rgba(0, 0, 0, .18);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      line-height: 1.55;
+      transition: background .2s, color .2s;
+    }
+    button { font: inherit; }
+
+    .container { width: min(1180px, calc(100% - 36px)); margin: 0 auto; }
+    header { padding: 30px 0 22px; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+    }
+    .eyebrow { color: var(--accent); font-size: .78rem; font-weight: 800; letter-spacing: .12em; }
+    h1 { margin: 5px 0 4px; font-size: clamp(1.55rem, 4vw, 2.15rem); letter-spacing: -.03em; }
+    .subtitle { margin: 0; color: var(--muted); font-size: .94rem; }
+    .actions { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+    .btn {
+      border: 1px solid var(--border); background: var(--surface); color: var(--text);
+      border-radius: 11px; padding: 9px 13px; cursor: pointer; font-weight: 650;
+      box-shadow: var(--shadow);
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+    [data-theme="dark"] .btn.primary { color: #101827; }
+
+    main { padding-bottom: 42px; }
+    .status-row {
+      display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      color: var(--muted); font-size: .83rem; margin: 0 0 16px;
+    }
+    .status { display: inline-flex; align-items: center; gap: 7px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 18px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 17px;
+      box-shadow: var(--shadow); padding: 19px;
+      min-width: 0;
+    }
+    .kpi-label { color: var(--muted); font-size: .86rem; font-weight: 650; }
+    .kpi-value { font-size: clamp(1.7rem, 4vw, 2.25rem); font-weight: 800; letter-spacing: -.04em; margin-top: 7px; }
+    .kpi-note { color: var(--muted); font-size: .78rem; margin-top: 2px; }
+
+    .section-heading {
+      display: flex; justify-content: space-between; align-items: end; gap: 12px;
+      margin: 28px 0 13px;
+    }
+    h2 { margin: 0; font-size: 1.13rem; }
+    .section-heading p { margin: 3px 0 0; color: var(--muted); font-size: .82rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .chart-card { min-height: 320px; }
+    .chart-wrap { height: 245px; position: relative; margin-top: 12px; }
+    .chart-wrap.short { height: 220px; }
+
+    .table-card { padding: 0; overflow: hidden; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 560px; }
+    th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: .88rem; }
+    th { color: var(--muted); font-size: .78rem; background: var(--surface-soft); font-weight: 750; }
+    tr:last-child td { border-bottom: 0; }
+    .pill {
+      display: inline-block; border-radius: 999px; padding: 3px 9px;
+      color: var(--accent); background: var(--accent-soft); font-size: .76rem; font-weight: 750;
+    }
+    .empty { color: var(--muted); text-align: center; padding: 30px; }
+    footer { color: var(--muted); font-size: .78rem; text-align: center; padding: 18px 0 30px; }
+
+    @media (max-width: 850px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .container { width: min(100% - 24px, 1180px); }
+      header { padding-top: 22px; }
+      .actions { width: 100%; }
+      .actions .btn { flex: 1; }
+      .card { padding: 15px; }
+      .kpi-grid { gap: 10px; }
+      .kpi-value { font-size: 1.65rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="container">
+    <div class="topbar">
+      <div>
+        <div class="eyebrow">COURSE ANALYTICS</div>
+        <h1>課程測驗｜數據戰情看板</h1>
+        <p class="subtitle">課程測驗填答情形與統計分析</p>
+      </div>
+      <div class="actions">
+        <button class="btn" id="themeButton" type="button" aria-label="切換色彩主題">🌙 深色模式</button>
+        <button class="btn primary" id="refreshButton" type="button">↻ 立即刷新</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="status-row">
+      <span class="status"><span class="dot"></span><span id="dataStatus">目前顯示示範資料</span></span>
+      <span>自動更新：每 5 分鐘｜最後更新：<time id="lastUpdated">尚未更新</time></span>
+    </div>
+
+    <section class="kpi-grid" aria-label="整體統計">
+      <article class="card">
+        <div class="kpi-label">總填答人數</div>
+        <div class="kpi-value" id="totalResponses">—</div>
+        <div class="kpi-note">已提交的有效回覆</div>
+      </article>
+      <article class="card">
+        <div class="kpi-label">測驗題目數</div>
+        <div class="kpi-value" id="totalQuestions">—</div>
+        <div class="kpi-note">納入統計的題目</div>
+      </article>
+      <article class="card">
+        <div class="kpi-label">參與班級數</div>
+        <div class="kpi-value" id="totalClasses">—</div>
+        <div class="kpi-note">有填答紀錄的班級</div>
+      </article>
+      <article class="card">
+        <div class="kpi-label">平均答題率</div>
+        <div class="kpi-value" id="averageCompletion">—</div>
+        <div class="kpi-note">已回答題數 ÷ 應答題數</div>
+      </article>
+    </section>
+
+    <div class="section-heading">
+      <div>
+        <h2>填答概況</h2>
+        <p>查看各班級參與情形與填答變化</p>
+      </div>
+    </div>
+    <section class="grid-2">
+      <article class="card chart-card">
+        <h2>班級填答分布</h2>
+        <div class="chart-wrap"><canvas id="classChart"></canvas></div>
+      </article>
+      <article class="card chart-card">
+        <h2>每日填答趨勢</h2>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </article>
+    </section>
+
+    <div class="section-heading">
+      <div>
+        <h2>題目統計</h2>
+        <p>各題選項分布與作答狀況</p>
+      </div>
+    </div>
+    <section class="grid-2" id="questionCharts">
+      <article class="card chart-card">
+        <h2>Q1｜示範題目一</h2>
+        <div class="chart-wrap short"><canvas id="questionChart1"></canvas></div>
+      </article>
+      <article class="card chart-card">
+        <h2>Q2｜示範題目二</h2>
+        <div class="chart-wrap short"><canvas id="questionChart2"></canvas></div>
+      </article>
+    </section>
+
+    <div class="section-heading">
+      <div>
+        <h2>所有題目統計總覽</h2>
+        <p>每題回答數、未作答數與最高比例選項</p>
+      </div>
+    </div>
+    <section class="card table-card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>題目</th>
+              <th>有效回答</th>
+              <th>未作答</th>
+              <th>最高比例選項</th>
+              <th>最高比例</th>
+            </tr>
+          </thead>
+          <tbody id="questionTableBody">
+            <tr><td colspan="5" class="empty">載入資料中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      課程測驗數據戰情看板 · 資料僅供課程統計分析
+    </footer>
+  </main>
+
+  <script>
+    /*
+     * 後續串接 Google Apps Script 時，將 API 網址填入 API_URL。
+     * API 應回傳本檔案下方 SAMPLE_DATA 相同結構的 JSON。
+     */
+    const API_URL = ""; // 例如：https://script.google.com/macros/s/部署ID/exec
+    const REFRESH_INTERVAL = 5 * 60 * 1000;
+
+    // 示範資料：正式串接 Google Sheets 後會由 API 資料取代。
+    const SAMPLE_DATA = {
+      summary: { totalResponses: 36, totalQuestions: 15, totalClasses: 3, averageCompletion: 96.8 },
+      classes: [
+        { name: "進四企一A", count: 12 },
+        { name: "進四資一A", count: 14 },
+        { name: "進四財一A", count: 10 }
+      ],
+      daily: [
+        { date: "11/02", count: 3 },
+        { date: "11/03", count: 7 },
+        { date: "11/04", count: 11 },
+        { date: "11/05", count: 9 },
+        { date: "11/06", count: 6 }
+      ],
+      questions: [
+        { id: "Q1", title: "示範題目一", answered: 36, unanswered: 0,
+          options: [{ label: "A", count: 20 }, { label: "B", count: 10 }, { label: "C", count: 6 }] },
+        { id: "Q2", title: "示範題目二", answered: 35, unanswered: 1,
+          options: [{ label: "A", count: 8 }, { label: "B", count: 19 }, { label: "C", count: 8 }] },
+        { id: "Q3", title: "示範題目三", answered: 34, unanswered: 2,
+          options: [{ label: "A", count: 12 }, { label: "B", count: 9 }, { label: "C", count: 13 }] }
+      ]
+    };
+
+    let charts = {};
+    let currentData = SAMPLE_DATA;
+
+    const $ = (id) => document.getElementById(id);
+
+    function getTheme() {
+      return document.documentElement.dataset.theme || "light";
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem("dashboard-theme", theme);
+      $("themeButton").textContent = theme === "dark" ? "☀️ 簡潔明亮" : "🌙 深色模式";
+      if (currentData) renderCharts(currentData);
+    }
+
+    function chartColors() {
+      const dark = getTheme() === "dark";
+      return {
+        text: dark ? "#a3afc0" : "#687386",
+        grid: dark ? "#303d50" : "#e3e8f0",
+        palette: ["#5478e8", "#22a77a", "#f2ad4e", "#a477dc", "#e47791", "#36a6b5"]
+      };
+    }
+
+    function makeChart(id, config) {
+      const canvas = $(id);
+      if (!canvas) return;
+      if (charts[id]) charts[id].destroy();
+      const colors = chartColors();
+      config.options = config.options || {};
+      config.options.responsive = true;
+      config.options.maintainAspectRatio = false;
+      config.options.plugins = config.options.plugins || {};
+      config.options.plugins.legend = config.options.plugins.legend || {};
+      config.options.plugins.legend.labels = {
+        color: colors.text, usePointStyle: true, boxWidth: 8,
+        ...(config.options.plugins.legend.labels || {})
+      };
+      config.options.scales = config.options.scales || {};
+      for (const axis of Object.values(config.options.scales)) {
+        axis.ticks = { color: colors.text, ...(axis.ticks || {}) };
+        axis.grid = { color: colors.grid, ...(axis.grid || {}) };
+      }
+      charts[id] = new Chart(canvas, config);
+    }
+
+    function renderCharts(data) {
+      const colors = chartColors();
+      makeChart("classChart", {
+        type: "doughnut",
+        data: {
+          labels: data.classes.map(x => x.name),
+          datasets: [{ data: data.classes.map(x => x.count), backgroundColor: colors.palette, borderWidth: 0 }]
+        },
+        options: { plugins: { legend: { position: "bottom" } }, cutout: "62%" }
+      });
+
+      makeChart("trendChart", {
+        type: "line",
+        data: {
+          labels: data.daily.map(x => x.date),
+          datasets: [{
+            label: "填答人數", data: data.daily.map(x => x.count),
+            borderColor: "#5478e8", backgroundColor: "rgba(84,120,232,.12)",
+            fill: true, tension: .35, pointRadius: 4
+          }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+
+      data.questions.slice(0, 2).forEach((q, index) => {
+        const canvasId = `questionChart${index + 1}`;
+        const card = canvasId && $(canvasId)?.closest(".card");
+        if (card) card.querySelector("h2").textContent = `${q.id}｜${q.title}`;
+        makeChart(canvasId, {
+          type: "bar",
+          data: {
+            labels: q.options.map(x => x.label),
+            datasets: [{ label: "選擇人數", data: q.options.map(x => x.count), backgroundColor: colors.palette, borderRadius: 7 }]
+          },
+          options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+      });
+    }
+
+    function renderTable(questions) {
+      const tbody = $("questionTableBody");
+      if (!questions.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">目前沒有題目資料</td></tr>';
+        return;
+      }
+      tbody.innerHTML = questions.map(q => {
+        const total = q.options.reduce((sum, item) => sum + Number(item.count || 0), 0);
+        const top = [...q.options].sort((a, b) => b.count - a.count)[0];
+        const percentage = total ? (top.count / total * 100).toFixed(1) : "0.0";
+        return `<tr>
+          <td><strong>${escapeHTML(q.id)}</strong> ${escapeHTML(q.title)}</td>
+          <td>${Number(q.answered || total).toLocaleString()}</td>
+          <td>${Number(q.unanswered || 0).toLocaleString()}</td>
+          <td><span class="pill">${escapeHTML(top?.label || "—")}</span></td>
+          <td>${percentage}%</td>
+        </tr>`;
+      }).join("");
+    }
+
+    function escapeHTML(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[char]);
+    }
+
+    function renderDashboard(data) {
+      currentData = data;
+      $("totalResponses").textContent = Number(data.summary.totalResponses || 0).toLocaleString();
+      $("totalQuestions").textContent = Number(data.summary.totalQuestions || data.questions.length).toLocaleString();
+      $("totalClasses").textContent = Number(data.summary.totalClasses || data.classes.length).toLocaleString();
+      $("averageCompletion").textContent = `${Number(data.summary.averageCompletion || 0).toFixed(1)}%`;
+      renderCharts(data);
+      renderTable(data.questions);
+      $("lastUpdated").textContent = new Date().toLocaleString("zh-TW", { hour12: false });
+    }
+
+    async function refreshData() {
+      const button = $("refreshButton");
+      button.disabled = true;
+      button.textContent = "更新中…";
+      try {
+        if (API_URL) {
+          const response = await fetch(API_URL, { cache: "no-store" });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const result = await response.json();
+          if (!result || result.success === false) throw new Error(result?.message || "API 回傳資料錯誤");
+          renderDashboard(result);
+          $("dataStatus").textContent = "已連接 Google Sheets 資料";
+        } else {
+          renderDashboard(SAMPLE_DATA);
+          $("dataStatus").textContent = "目前顯示示範資料（尚未連接 Google Sheets）";
+        }
+      } catch (error) {
+        console.error("資料更新失敗：", error);
+        $("dataStatus").textContent = `更新失敗：${error.message}`;
+      } finally {
+        button.disabled = false;
+        button.textContent = "↻ 立即刷新";
+      }
+    }
+
+    $("themeButton").addEventListener("click", () => {
+      applyTheme(getTheme() === "dark" ? "light" : "dark");
+    });
+    $("refreshButton").addEventListener("click", refreshData);
+
+    const savedTheme = localStorage.getItem("dashboard-theme");
+    applyTheme(savedTheme === "dark" ? "dark" : "light");
+    refreshData();
+    setInterval(refreshData, REFRESH_INTERVAL);
+  </script>
+</body>
+</html>
