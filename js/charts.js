@@ -676,3 +676,42 @@ canvas.parentElement.appendChild(yAxisTitle);
         loadChartJS;
 
 })();
+
+const chartStyle = document.createElement("style");
+
+chartStyle.textContent = `
+.question-y-axis-title {
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 0;
+
+    color: #374151;
+
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    line-height: 1.2;
+
+    pointer-events: none;
+}
+
+.question-y-axis-title span {
+    display: block;
+    writing-mode: horizontal-tb;
+    transform: none;
+}
+`;
+
+document.head.appendChild(chartStyle);
