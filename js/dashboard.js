@@ -319,16 +319,14 @@ const Dashboard = {
         });
 
 
-        this.state.currentPage = page;
+       this.state.currentPage = page;
 
 
-        /* ---------------------------------------------
-           手機版切換後關閉 Sidebar
-        --------------------------------------------- */
+/* ---------------------------------------------
+   手機版切換後關閉 Sidebar
+--------------------------------------------- */
 
-        document.body.classList.remove(
-            "sidebar-open"
-        );
+this.closeMobileMenu();
     },
 
 
