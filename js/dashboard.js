@@ -347,20 +347,17 @@ bindMobileMenu() {
         document.getElementById("sidebar");
 
     if (!menuButton || !sidebar) {
-        console.warn(
-            "Mobile Menu 初始化失敗：找不到 mobileMenuBtn 或 sidebar"
-        );
+        console.warn("Mobile menu elements not found");
         return;
     }
 
 
-    /* ---------------------------------------------
-       建立手機版遮罩
-    --------------------------------------------- */
+    /* =====================================================
+       建立 Overlay
+    ===================================================== */
 
     let overlay =
         document.getElementById("sidebarOverlay");
-
 
     if (!overlay) {
 
@@ -374,135 +371,182 @@ bindMobileMenu() {
             "sidebar-overlay";
 
         document.body.appendChild(overlay);
-
     }
 
 
-    /* ---------------------------------------------
-       確保手機按鈕可以點擊
-    --------------------------------------------- */
+    /* =====================================================
+       開啟
+    ===================================================== */
 
-    menuButton.style.position =
-        "relative";
+    const openMenu = () => {
 
-    menuButton.style.zIndex =
-        "10002";
+        document.body.classList.add(
+            "sidebar-open"
+        );
 
-    menuButton.style.pointerEvents =
-        "auto";
+        sidebar.classList.add(
+            "mobile-open"
+        );
+
+        overlay.classList.add(
+            "active"
+        );
+
+        menuButton.setAttribute(
+            "aria-expanded",
+            "true"
+        );
+
+        menuButton.setAttribute(
+            "aria-label",
+            "關閉選單"
+        );
+    };
 
 
-    /* ---------------------------------------------
-       開啟 / 關閉 Sidebar
-    --------------------------------------------- */
+    /* =====================================================
+       關閉
+    ===================================================== */
+
+    const closeMenu = () => {
+
+        document.body.classList.remove(
+            "sidebar-open"
+        );
+
+        sidebar.classList.remove(
+            "mobile-open"
+        );
+
+        overlay.classList.remove(
+            "active"
+        );
+
+        menuButton.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+
+        menuButton.setAttribute(
+            "aria-label",
+            "開啟選單"
+        );
+    };
+
+
+    /* =====================================================
+       切換
+    ===================================================== */
+
+    const toggleMenu = (event) => {
+
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        const isOpen =
+            document.body.classList.contains(
+                "sidebar-open"
+            );
+
+        if (isOpen) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    };
+
+
+    /* =====================================================
+       漢堡按鈕
+    ===================================================== */
 
     menuButton.addEventListener(
         "click",
-        event => {
-
-            event.preventDefault();
-
-            event.stopPropagation();
-
-            const isOpen =
-                document.body.classList.contains(
-                    "sidebar-open"
-                );
-
-
-            if (isOpen) {
-
-                this.closeMobileMenu();
-
-            } else {
-
-                this.openMobileMenu();
-
-            }
-
-        }
+        toggleMenu,
+        false
     );
 
 
-    /* ---------------------------------------------
-       點擊遮罩關閉
-    --------------------------------------------- */
+    /* =====================================================
+       Overlay
+    ===================================================== */
 
     overlay.addEventListener(
         "click",
-        event => {
+        (event) => {
 
             event.preventDefault();
+            event.stopPropagation();
 
-            this.closeMobileMenu();
-
-        }
+            closeMenu();
+        },
+        false
     );
 
 
-    /* ---------------------------------------------
+    /* =====================================================
+       點擊側欄項目後自動關閉
+    ===================================================== */
+
+    sidebar.addEventListener(
+        "click",
+        (event) => {
+
+            const target =
+                event.target.closest(
+                    ".nav-item, [data-page]"
+                );
+
+            if (!target) {
+                return;
+            }
+
+            if (
+                window.innerWidth <= 700
+            ) {
+                closeMenu();
+            }
+        },
+        false
+    );
+
+
+    /* =====================================================
        ESC 關閉
-    --------------------------------------------- */
+    ===================================================== */
 
     document.addEventListener(
         "keydown",
-        event => {
+        (event) => {
 
             if (
-                event.key === "Escape" &&
-                document.body.classList.contains(
-                    "sidebar-open"
-                )
+                event.key === "Escape"
             ) {
-
-                this.closeMobileMenu();
-
+                closeMenu();
             }
-
         }
     );
 
 
-    /* ---------------------------------------------
-       Sidebar 內按鈕點擊後關閉
-    --------------------------------------------- */
+    /* =====================================================
+       視窗變回桌面版時自動關閉
+    ===================================================== */
 
-    sidebar
-        .querySelectorAll(
-            ".sidebar-nav button[data-page]"
-        )
-        .forEach(button => {
+    window.addEventListener(
+        "resize",
+        () => {
 
-            button.addEventListener(
-                "click",
-                () => {
+            if (
+                window.innerWidth > 700
+            ) {
+                closeMenu();
+            }
+        }
+    );
 
-                    this.closeMobileMenu();
-
-                }
-            );
-
-        });
-
-
-    /* ---------------------------------------------
-       手機 Header 保持在最上層
-    --------------------------------------------- */
-
-    const mobileHeader =
-        document.querySelector(".mobile-header");
-
-
-    if (mobileHeader) {
-
-        mobileHeader.style.position =
-            "relative";
-
-        mobileHeader.style.zIndex =
-            "10002";
-
-    }
-},
+}
 
 
 /* =====================================================
