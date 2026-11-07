@@ -1,485 +1,683 @@
 /* =========================================================
    charts.js
    AI Agent Quiz Dashboard
-   Chart.js chart functions
+   Chart.js 4.4.7
 ========================================================= */
 
+(function () {
+    "use strict";
 
-/* =========================================================
-   Chart instances
-========================================================= */
+    /* =====================================================
+       Chart.js CDN
+    ===================================================== */
 
-const DashboardCharts = {
-    classChart: null,
-    questionCharts: {}
-};
+    const CHART_JS_URL =
+        "https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js";
 
+    let chartJsPromise = null;
 
-/* =========================================================
-   Load Chart.js
-========================================================= */
-
-function loadChartJS() {
-
-    return new Promise((resolve, reject) => {
-
-        if (typeof Chart !== "undefined") {
-            resolve();
-            return;
+    function loadChartJS() {
+        // 已經載入
+        if (window.Chart) {
+            return Promise.resolve(window.Chart);
         }
 
-
-        const existing =
-            document.querySelector(
-                'script[data-chartjs="true"]'
-            );
-
-
-        if (existing) {
-
-            existing.addEventListener(
-                "load",
-                resolve
-            );
-
-            existing.addEventListener(
-                "error",
-                reject
-            );
-
-            return;
+        // 正在載入
+        if (chartJsPromise) {
+            return chartJsPromise;
         }
 
+        chartJsPromise = new Promise((resolve, reject) => {
+            const existingScript = document.querySelector(
+                'script[src*="chart.js"]'
+            );
 
-        const script =
-            document.createElement("script");
+            if (existingScript) {
+                existingScript.addEventListener("load", () => {
+                    if (window.Chart) {
+                        resolve(window.Chart);
+                    } else {
+                        reject(new Error("Chart.js 載入後找不到 Chart。"));
+                    }
+                });
+
+                existingScript.addEventListener("error", () => {
+                    reject(new Error("Chart.js 載入失敗。"));
+                });
+
+                return;
+            }
+
+            const script = document.createElement("script");
+
+            script.src = CHART_JS_URL;
+            script.async = true;
+
+            script.onload = () => {
+                if (window.Chart) {
+                    resolve(window.Chart);
+                } else {
+                    reject(new Error("Chart.js 載入後找不到 Chart。"));
+                }
+            };
+
+            script.onerror = () => {
+                reject(new Error("Chart.js CDN 載入失敗。"));
+            };
+
+            document.head.appendChild(script);
+        });
+
+        return chartJsPromise;
+    }
 
 
-        script.src =
-            "https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js";
+    /* =====================================================
+       Chart Registry
+       避免同一個 canvas 重複建立 Chart
+    ===================================================== */
 
-        script.async = true;
-
-        script.dataset.chartjs = "true";
+    const chartRegistry = new Map();
 
 
-        script.onload = () => {
-            resolve();
+    function destroyChart(canvasId) {
+        const oldChart = chartRegistry.get(canvasId);
+
+        if (oldChart) {
+            try {
+                oldChart.destroy();
+            } catch (error) {
+                console.warn("Chart destroy error:", error);
+            }
+
+            chartRegistry.delete(canvasId);
+        }
+
+        // 如果 Chart.js 有自己的 registry，也同步處理
+        const canvas = document.getElementById(canvasId);
+
+        if (canvas && window.Chart) {
+            const existingChart = window.Chart.getChart(canvas);
+
+            if (existingChart) {
+                try {
+                    existingChart.destroy();
+                } catch (error) {
+                    console.warn("Existing Chart destroy error:", error);
+                }
+            }
+        }
+    }
+
+
+    /* =====================================================
+       共用設定
+    ===================================================== */
+
+    const FONT_FAMILY =
+        '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif';
+
+
+    const COLORS = {
+        A: "#3B82F6", // 藍
+        B: "#22C55E", // 綠
+        C: "#F59E0B", // 橘
+        D: "#8B5CF6"  // 紫
+    };
+
+
+    const CLASS_COLORS = [
+        "#3B82F6",
+        "#22C55E",
+        "#F59E0B",
+        "#8B5CF6",
+        "#EF4444",
+        "#06B6D4",
+        "#EC4899",
+        "#84CC16",
+        "#F97316",
+        "#14B8A6",
+        "#6366F1"
+    ];
+
+
+    /* =====================================================
+       數值處理
+    ===================================================== */
+
+    function normalizeNumber(value) {
+        const number = Number(value);
+
+        if (!Number.isFinite(number)) {
+            return 0;
+        }
+
+        return number;
+    }
+
+
+    function normalizeCounts(counts) {
+        if (!counts) {
+            return {
+                A: 0,
+                B: 0,
+                C: 0,
+                D: 0
+            };
+        }
+
+        // 支援：
+        // { A: 3, B: 4, C: 2, D: 2 }
+        return {
+            A: normalizeNumber(counts.A),
+            B: normalizeNumber(counts.B),
+            C: normalizeNumber(counts.C),
+            D: normalizeNumber(counts.D)
         };
+    }
 
 
-        script.onerror = () => {
+    /* =====================================================
+       Tooltip 共用設定
+    ===================================================== */
 
-            reject(
-                new Error(
-                    "Chart.js 載入失敗"
-                )
-            );
+    function getTooltipConfig() {
+        return {
+            enabled: true,
 
+            backgroundColor: "rgba(17, 24, 39, 0.94)",
+
+            titleColor: "#FFFFFF",
+            bodyColor: "#FFFFFF",
+
+            borderColor: "rgba(255,255,255,0.1)",
+            borderWidth: 1,
+
+            padding: 10,
+
+            titleFont: {
+                family: FONT_FAMILY,
+                size: 12,
+                weight: "700"
+            },
+
+            bodyFont: {
+                family: FONT_FAMILY,
+                size: 12,
+                weight: "500"
+            },
+
+            displayColors: true,
+
+            callbacks: {
+                label: function (context) {
+                    const value = context.parsed.y ?? context.parsed;
+
+                    return ` ${value} 人`;
+                }
+            }
         };
-
-
-        document.head.appendChild(script);
-
-    });
-}
-
-
-/* =========================================================
-   Class Doughnut Chart
-========================================================= */
-
-async function renderClassDoughnutChart(
-    labels,
-    values
-) {
-
-    try {
-
-        await loadChartJS();
-
-    } catch (error) {
-
-        console.error(
-            "Chart.js 載入失敗：",
-            error
-        );
-
-        return;
     }
 
 
-    const canvas =
-        document.getElementById(
-            "classDoughnutChart"
-        );
+    /* =====================================================
+       建立班級甜甜圈圖
+       
+       dashboard.js:
+       renderClassDoughnutChart(labels, values)
+    ===================================================== */
 
+    async function renderClassDoughnutChart(labels, values) {
+        const canvas = document.getElementById("classDoughnutChart");
 
-    const empty =
-        document.getElementById(
-            "class-chart-empty"
-        );
-
-
-    if (!canvas) return;
-
-
-    if (
-        DashboardCharts.classChart
-    ) {
-
-        DashboardCharts.classChart.destroy();
-
-        DashboardCharts.classChart =
-            null;
-    }
-
-
-    /*
-     * 沒有資料
-     */
-
-    if (
-        !labels.length ||
-        !values.length
-    ) {
-
-        if (empty) {
-            empty.classList.add(
-                "visible"
+        if (!canvas) {
+            console.warn(
+                '找不到 canvas：#classDoughnutChart'
             );
+
+            return null;
         }
 
-        return;
-    }
+        try {
+            const Chart = await loadChartJS();
 
+            destroyChart("classDoughnutChart");
 
-    if (empty) {
+            const safeLabels = Array.isArray(labels)
+                ? labels
+                : [];
 
-        empty.classList.remove(
-            "visible"
-        );
-    }
+            const safeValues = Array.isArray(values)
+                ? values.map(normalizeNumber)
+                : [];
 
+            const ctx = canvas.getContext("2d");
 
-    const ctx =
-        canvas.getContext("2d");
+            if (!ctx) {
+                console.warn("無法取得 classDoughnutChart canvas context。");
+                return null;
+            }
 
-
-    DashboardCharts.classChart =
-        new Chart(
-            ctx,
-            {
-
+            const chart = new Chart(ctx, {
                 type: "doughnut",
 
                 data: {
-
-                    labels: labels,
+                    labels: safeLabels,
 
                     datasets: [
                         {
+                            data: safeValues,
 
-                            data: values,
+                            backgroundColor: safeLabels.map(
+                                (_, index) =>
+                                    CLASS_COLORS[
+                                        index % CLASS_COLORS.length
+                                    ]
+                            ),
+
+                            borderColor: "#FFFFFF",
 
                             borderWidth: 2,
 
-                            borderColor: "#ffffff"
-
+                            hoverOffset: 8
                         }
                     ]
-
                 },
 
                 options: {
-
                     responsive: true,
 
                     maintainAspectRatio: false,
 
                     cutout: "62%",
 
+                    layout: {
+                        padding: 8
+                    },
+
                     plugins: {
-
                         legend: {
+                            display: true,
 
-                            position: "bottom",
+                            position: "right",
 
                             labels: {
-
-                                padding: 16,
-
                                 usePointStyle: true,
 
+                                pointStyle: "circle",
+
+                                padding: 12,
+
+                                color: "#374151",
+
                                 font: {
-                                    size: 11
+                                    family: FONT_FAMILY,
+                                    size: 11,
+                                    weight: "500"
                                 }
-
                             }
-
                         },
 
                         tooltip: {
+                            enabled: true,
+
+                            backgroundColor: "rgba(17, 24, 39, 0.94)",
+
+                            titleColor: "#FFFFFF",
+
+                            bodyColor: "#FFFFFF",
+
+                            padding: 10,
 
                             callbacks: {
-
-                                label: function(
-                                    context
-                                ) {
+                                label: function (context) {
+                                    const label =
+                                        context.label || "";
 
                                     const value =
-                                        context.raw;
+                                        normalizeNumber(
+                                            context.raw
+                                        );
 
-                                    const total =
-                                        context.dataset.data
-                                            .reduce(
-                                                (
-                                                    sum,
-                                                    current
-                                                ) =>
-                                                    sum +
-                                                    current,
-                                                0
-                                            );
-
-
-                                    const percentage =
-                                        total > 0
-                                            ? (
-                                                value /
-                                                total *
-                                                100
-                                            ).toFixed(1)
-                                            : 0;
-
-
-                                    return (
-                                        `${context.label}：` +
-                                        `${value} 人 ` +
-                                        `(${percentage}%)`
-                                    );
-
+                                    return ` ${label}：${value} 人`;
                                 }
-
                             }
-
                         }
-
                     }
-
                 }
+            });
 
+            chartRegistry.set(
+                "classDoughnutChart",
+                chart
+            );
+
+            return chart;
+
+        } catch (error) {
+            console.error(
+                "班級甜甜圈圖建立失敗：",
+                error
+            );
+
+            return null;
+        }
+    }
+
+
+    /* =====================================================
+       建立每題 A/B/C/D 直式長條圖
+
+       dashboard.js:
+       renderQuestionBarChart(canvasId, counts)
+
+       counts:
+       {
+           A: 3,
+           B: 5,
+           C: 2,
+           D: 1
+       }
+    ===================================================== */
+
+    async function renderQuestionBarChart(canvasId, counts) {
+        const canvas = document.getElementById(canvasId);
+
+        if (!canvas) {
+            console.warn(
+                `找不到題目圖表 canvas：#${canvasId}`
+            );
+
+            return null;
+        }
+
+        try {
+            const Chart = await loadChartJS();
+
+            destroyChart(canvasId);
+
+            const normalized = normalizeCounts(counts);
+
+            const labels = ["A", "B", "C", "D"];
+
+            const data = [
+                normalized.A,
+                normalized.B,
+                normalized.C,
+                normalized.D
+            ];
+
+            const ctx = canvas.getContext("2d");
+
+            if (!ctx) {
+                console.warn(
+                    `無法取得 ${canvasId} canvas context。`
+                );
+
+                return null;
             }
-        );
-}
 
+            const chart = new Chart(ctx, {
+                type: "bar",
 
-/* =========================================================
-   Question Bar Chart
-========================================================= */
+                data: {
+                    labels: labels,
 
-async function renderQuestionBarChart(
-    canvasId,
-    counts,
-    options = {}
-) {
+                    datasets: [
+                        {
+                            label: "作答人數",
 
-    try {
+                            data: data,
 
-        await loadChartJS();
+                            backgroundColor: [
+                                COLORS.A,
+                                COLORS.B,
+                                COLORS.C,
+                                COLORS.D
+                            ],
 
-    } catch (error) {
+                            borderColor: [
+                                COLORS.A,
+                                COLORS.B,
+                                COLORS.C,
+                                COLORS.D
+                            ],
 
-        console.error(
-            "Chart.js 載入失敗：",
-            error
-        );
+                            borderWidth: 1,
 
-        return;
-    }
+                            borderRadius: 7,
 
+                            borderSkipped: false,
 
-    const canvas =
-        document.getElementById(
-            canvasId
-        );
-
-
-    if (!canvas) return;
-
-
-    /*
-     * 如果同一張圖已經存在
-     * 先刪除
-     */
-
-    if (
-        DashboardCharts.questionCharts[
-            canvasId
-        ]
-    ) {
-
-        DashboardCharts.questionCharts[
-            canvasId
-        ].destroy();
-
-    }
-
-
-    const ctx =
-        canvas.getContext("2d");
-
-
-    const maxValue =
-        Math.max(
-            counts.A || 0,
-            counts.B || 0,
-            counts.C || 0,
-            counts.D || 0
-        );
-
-
-    /*
-     * Y 軸上限
-     */
-
-    const yMax =
-        Math.max(
-            1,
-            maxValue + 1
-        );
-
-
-    DashboardCharts.questionCharts[
-        canvasId
-    ] = new Chart(
-        ctx,
-        {
-
-            type: "bar",
-
-            data: {
-
-                labels: [
-                    "A",
-                    "B",
-                    "C",
-                    "D"
-                ],
-
-                datasets: [
-                    {
-
-                        label: "人數",
-
-                        data: [
-
-                            Number(
-                                counts.A || 0
-                            ),
-
-                            Number(
-                                counts.B || 0
-                            ),
-
-                            Number(
-                                counts.C || 0
-                            ),
-
-                            Number(
-                                counts.D || 0
-                            )
-
-                        ],
-
-                        borderRadius: 8,
-
-                        borderSkipped: false
-
-                    }
-
-                ]
-
-            },
-
-            options: {
-
-                responsive: true,
-
-                maintainAspectRatio: false,
-
-                plugins: {
-
-                    legend: {
-                        display: false
-                    },
-
-                    tooltip: {
-
-                        callbacks: {
-
-                            label: function(
-                                context
-                            ) {
-
-                                return (
-                                    ` ${context.raw} 人`
-                                );
-
-                            }
-
+                            maxBarThickness: 70
                         }
-
-                    }
-
+                    ]
                 },
 
-                scales: {
+                options: {
+                    responsive: true,
 
-                    x: {
+                    maintainAspectRatio: false,
 
-                        title: {
-
-                            display: true,
-
-                            text: "選項"
-
-                        },
-
-                        grid: {
-                            display: false
-                        }
-
+                    animation: {
+                        duration: 500
                     },
 
-                    y: {
+                    interaction: {
+                        intersect: false,
 
-                        beginAtZero: true,
+                        mode: "index"
+                    },
 
-                        suggestedMax: yMax,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
 
-                        title: {
+                            grid: {
+                                display: false
+                            },
 
-                            display: true,
+                            border: {
+                                display: false
+                            },
 
-                            text: "人數"
+                            ticks: {
+                                color: "#374151",
 
+                                font: {
+                                    family: FONT_FAMILY,
+                                    size: 13,
+                                    weight: "700"
+                                }
+                            },
+
+                            title: {
+                                display: false
+                            }
                         },
 
-                        ticks: {
+                        y: {
+                            beginAtZero: true,
 
-                            precision: 0,
+                            min: 0,
 
-                            stepSize: 1
+                            ticks: {
+                                precision: 0,
 
+                                stepSize: 1,
+
+                                color: "#6B7280",
+
+                                font: {
+                                    family: FONT_FAMILY,
+                                    size: 11,
+                                    weight: "500"
+                                }
+                            },
+
+                            grid: {
+                                color: "rgba(107, 114, 128, 0.12)",
+
+                                drawBorder: false
+                            },
+
+                            border: {
+                                display: false
+                            },
+
+                            title: {
+                                display: true,
+
+                                text: "人數",
+
+                                color: "#374151",
+
+                                font: {
+                                    family: FONT_FAMILY,
+                                    size: 12,
+                                    weight: "700"
+                                },
+
+                                padding: {
+                                    bottom: 8
+                                }
+                            }
                         }
+                    },
 
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+
+                        tooltip: getTooltipConfig()
                     }
-
                 }
+            });
 
-            }
+            chartRegistry.set(
+                canvasId,
+                chart
+            );
 
+            return chart;
+
+        } catch (error) {
+            console.error(
+                `題目圖表 ${canvasId} 建立失敗：`,
+                error
+            );
+
+            return null;
         }
-    );
-}
+    }
+
+
+    /* =====================================================
+       更新既有題目圖表
+       如果之後 dashboard.js 需要動態更新，可以使用
+    ===================================================== */
+
+    function updateQuestionBarChart(canvasId, counts) {
+        const chart = chartRegistry.get(canvasId);
+
+        if (!chart) {
+            return renderQuestionBarChart(
+                canvasId,
+                counts
+            );
+        }
+
+        const normalized = normalizeCounts(counts);
+
+        chart.data.datasets[0].data = [
+            normalized.A,
+            normalized.B,
+            normalized.C,
+            normalized.D
+        ];
+
+        chart.update();
+
+        return chart;
+    }
+
+
+    /* =====================================================
+       清除全部圖表
+    ===================================================== */
+
+    function destroyAllCharts() {
+        chartRegistry.forEach((chart, canvasId) => {
+            try {
+                chart.destroy();
+            } catch (error) {
+                console.warn(
+                    `清除 ${canvasId} 圖表失敗：`,
+                    error
+                );
+            }
+        });
+
+        chartRegistry.clear();
+    }
+
+
+    /* =====================================================
+       重新調整所有圖表
+    ===================================================== */
+
+    function resizeAllCharts() {
+        chartRegistry.forEach((chart) => {
+            try {
+                chart.resize();
+            } catch (error) {
+                console.warn(
+                    "Chart resize error:",
+                    error
+                );
+            }
+        });
+    }
+
+
+    /* =====================================================
+       視窗尺寸改變
+    ===================================================== */
+
+    let resizeTimer = null;
+
+    window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+
+        resizeTimer = setTimeout(() => {
+            resizeAllCharts();
+        }, 150);
+    });
+
+
+    /* =====================================================
+       對外公開
+       
+       dashboard.js 可以直接呼叫：
+       
+       renderClassDoughnutChart(...)
+       renderQuestionBarChart(...)
+    ===================================================== */
+
+    window.renderClassDoughnutChart =
+        renderClassDoughnutChart;
+
+    window.renderQuestionBarChart =
+        renderQuestionBarChart;
+
+    window.updateQuestionBarChart =
+        updateQuestionBarChart;
+
+    window.destroyAllCharts =
+        destroyAllCharts;
+
+    window.loadChartJS =
+        loadChartJS;
+
+})();
