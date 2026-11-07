@@ -1151,3 +1151,155 @@ body.dark-mode .class-list-item {
 body.dark-mode .modal-close {
     background: #374151;
 }
+
+/* =========================================================
+   QUESTION ANALYSIS - NEW LAYOUT
+========================================================= */
+
+.question-analysis-body {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1.35fr)
+        minmax(320px, 0.65fr);
+
+    gap: 0;
+
+    min-height: 330px;
+}
+
+
+.question-chart-wrapper {
+    position: relative;
+
+    min-height: 330px;
+
+    padding: 24px;
+}
+
+
+.question-chart-wrapper canvas {
+    width: 100% !important;
+    height: 280px !important;
+}
+
+
+.question-options {
+    padding: 24px;
+
+    border-left: 1px solid var(--border);
+
+    background: #fafafa;
+}
+
+
+.options-title {
+    margin-bottom: 14px;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    color: var(--text-secondary);
+}
+
+
+.option-description {
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 10px;
+
+    margin-bottom: 12px;
+
+    padding: 10px;
+
+    border-radius: 9px;
+
+    background: white;
+
+    border: 1px solid var(--border);
+
+    font-size: 11px;
+
+    line-height: 1.6;
+}
+
+
+.option-description.correct-option {
+
+    border-color: #bbf7d0;
+
+    background: #f0fdf4;
+}
+
+
+.option-letter {
+
+    flex: 0 0 24px;
+
+    width: 24px;
+
+    height: 24px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 6px;
+
+    background: #f3f4f6;
+
+    font-size: 11px;
+
+    font-weight: 700;
+}
+
+
+.correct-option .option-letter {
+
+    background: #dcfce7;
+
+    color: #15803d;
+}
+
+
+.option-text {
+
+    flex: 1;
+
+    color: var(--text-secondary);
+}
+
+
+.correct-option .option-text {
+
+    color: var(--text-main);
+
+    font-weight: 500;
+}
+
+
+/* Mobile */
+
+@media (max-width: 900px) {
+
+    .question-analysis-body {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .question-options {
+
+        border-left: 0;
+
+        border-top: 1px solid var(--border);
+
+    }
+
+}
