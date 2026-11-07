@@ -336,38 +336,271 @@ const Dashboard = {
        MOBILE MENU
     ===================================================== */
 
-    bindMobileMenu() {
+   /* =====================================================
+   MOBILE MENU
+===================================================== */
 
-        const menuButton =
-            document.querySelector(".mobile-menu-button");
+bindMobileMenu() {
 
-        const overlay =
-            document.querySelector(".sidebar-overlay");
+    const menuButton =
+        document.getElementById("mobileMenuBtn");
+
+    const sidebar =
+        document.getElementById("sidebar");
+
+    if (!menuButton || !sidebar) {
+        console.warn(
+            "Mobile Menu 初始化失敗：找不到 mobileMenuBtn 或 sidebar"
+        );
+        return;
+    }
 
 
-        if (menuButton) {
+    /* ---------------------------------------------
+       建立手機版遮罩
+    --------------------------------------------- */
 
-            menuButton.addEventListener("click", () => {
+    let overlay =
+        document.getElementById("sidebarOverlay");
 
-                document.body.classList.toggle(
+
+    if (!overlay) {
+
+        overlay =
+            document.createElement("div");
+
+        overlay.id =
+            "sidebarOverlay";
+
+        overlay.className =
+            "sidebar-overlay";
+
+        document.body.appendChild(overlay);
+
+    }
+
+
+    /* ---------------------------------------------
+       確保手機按鈕可以點擊
+    --------------------------------------------- */
+
+    menuButton.style.position =
+        "relative";
+
+    menuButton.style.zIndex =
+        "10002";
+
+    menuButton.style.pointerEvents =
+        "auto";
+
+
+    /* ---------------------------------------------
+       開啟 / 關閉 Sidebar
+    --------------------------------------------- */
+
+    menuButton.addEventListener(
+        "click",
+        event => {
+
+            event.preventDefault();
+
+            event.stopPropagation();
+
+            const isOpen =
+                document.body.classList.contains(
                     "sidebar-open"
                 );
 
-            });
+
+            if (isOpen) {
+
+                this.closeMobileMenu();
+
+            } else {
+
+                this.openMobileMenu();
+
+            }
+
         }
+    );
 
 
-        if (overlay) {
+    /* ---------------------------------------------
+       點擊遮罩關閉
+    --------------------------------------------- */
 
-            overlay.addEventListener("click", () => {
+    overlay.addEventListener(
+        "click",
+        event => {
 
-                document.body.classList.remove(
+            event.preventDefault();
+
+            this.closeMobileMenu();
+
+        }
+    );
+
+
+    /* ---------------------------------------------
+       ESC 關閉
+    --------------------------------------------- */
+
+    document.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key === "Escape" &&
+                document.body.classList.contains(
                     "sidebar-open"
-                );
+                )
+            ) {
 
-            });
+                this.closeMobileMenu();
+
+            }
+
         }
-    },
+    );
+
+
+    /* ---------------------------------------------
+       Sidebar 內按鈕點擊後關閉
+    --------------------------------------------- */
+
+    sidebar
+        .querySelectorAll(
+            ".sidebar-nav button[data-page]"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    this.closeMobileMenu();
+
+                }
+            );
+
+        });
+
+
+    /* ---------------------------------------------
+       手機 Header 保持在最上層
+    --------------------------------------------- */
+
+    const mobileHeader =
+        document.querySelector(".mobile-header");
+
+
+    if (mobileHeader) {
+
+        mobileHeader.style.position =
+            "relative";
+
+        mobileHeader.style.zIndex =
+            "10002";
+
+    }
+},
+
+
+/* =====================================================
+   OPEN MOBILE MENU
+===================================================== */
+
+openMobileMenu() {
+
+    document.body.classList.add(
+        "sidebar-open"
+    );
+
+
+    const overlay =
+        document.getElementById(
+            "sidebarOverlay"
+        );
+
+
+    if (overlay) {
+
+        overlay.classList.add(
+            "active"
+        );
+
+    }
+
+
+    const menuButton =
+        document.getElementById(
+            "mobileMenuBtn"
+        );
+
+
+    if (menuButton) {
+
+        menuButton.setAttribute(
+            "aria-label",
+            "關閉選單"
+        );
+
+        menuButton.setAttribute(
+            "aria-expanded",
+            "true"
+        );
+
+    }
+},
+
+
+/* =====================================================
+   CLOSE MOBILE MENU
+===================================================== */
+
+closeMobileMenu() {
+
+    document.body.classList.remove(
+        "sidebar-open"
+    );
+
+
+    const overlay =
+        document.getElementById(
+            "sidebarOverlay"
+        );
+
+
+    if (overlay) {
+
+        overlay.classList.remove(
+            "active"
+        );
+
+    }
+
+
+    const menuButton =
+        document.getElementById(
+            "mobileMenuBtn"
+        );
+
+
+    if (menuButton) {
+
+        menuButton.setAttribute(
+            "aria-label",
+            "開啟選單"
+        );
+
+        menuButton.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+
+    }
+},
 
 
     /* =====================================================
