@@ -526,22 +526,25 @@
                             },
 
                             title: {
-                                display: true,
+    display: true,
 
-                                text: "人數",
+    text: "人數",
 
-                                color: "#374151",
+    color: "#374151",
 
-                                font: {
-                                    family: FONT_FAMILY,
-                                    size: 12,
-                                    weight: "700"
-                                },
+    font: {
+        family: FONT_FAMILY,
+        size: 12,
+        weight: "700"
+    },
 
-                                padding: {
-                                    bottom: 8
-                                }
-                            }
+    padding: {
+        bottom: 8
+    },
+
+    // 強制 Y 軸標題保持水平
+    rotation: 0
+}
                         }
                     },
 
