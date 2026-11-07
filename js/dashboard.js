@@ -438,75 +438,87 @@ const Dashboard = {
        ANALYSIS
     ===================================================== */
 
-    renderAnalysis() {
+renderAnalysis() {
 
-        const container =
-            document.getElementById("question-analysis");
+    const container =
+        document.getElementById(
+            "question-analysis"
+        );
 
-        if (!container) return;
-
-
-        container.innerHTML = "";
-
-
-        const questions =
-            this.state.questions;
-
-        if (!questions.length) {
-
-            container.innerHTML = `
-                <div class="empty-state">
-                    尚無題目資料
-                </div>
-            `;
-
-            return;
-        }
+    if (!container) return;
 
 
-        questions.forEach((question, index) => {
-
-            const questionNumber =
-                index + 1;
-
-            const card =
-                document.createElement("div");
-
-            card.className =
-                "question-analysis-card";
+    container.innerHTML = "";
 
 
-            card.innerHTML = `
+    const questions =
+        this.state.questions;
 
-                <div class="question-analysis-header">
 
-                    <div>
+    if (!questions.length) {
 
-                        <div class="question-number">
-                            Q${questionNumber}
-                        </div>
+        container.innerHTML = `
+            <div class="empty-state">
+                尚無題目資料
+            </div>
+        `;
 
-                        <h3>
-                            ${this.escapeHTML(
-                                question.title || ""
-                            )}
-                        </h3>
+        return;
+    }
 
+
+    questions.forEach((question, index) => {
+
+        const questionNumber =
+            index + 1;
+
+
+        const choices =
+            QUESTION_CHOICES[index] || [];
+
+
+        const card =
+            document.createElement("article");
+
+
+        card.className =
+            "question-analysis-card";
+
+
+        card.innerHTML = `
+
+            <div class="question-analysis-header">
+
+                <div class="question-heading">
+
+                    <div class="question-number">
+                        Q${questionNumber}
                     </div>
 
-                    <div class="question-answer">
-
-                        正確答案：
-                        <strong>
-                            ${this.escapeHTML(
-                                question.answer || "-"
-                            )}
-                        </strong>
-
-                    </div>
+                    <h3>
+                        ${this.escapeHTML(
+                            question.title || ""
+                        )}
+                    </h3>
 
                 </div>
 
+
+                <div class="question-answer">
+
+                    正確答案：
+                    <strong>
+                        ${this.escapeHTML(
+                            question.answer || "-"
+                        )}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="question-analysis-body">
 
                 <div class="question-chart-wrapper">
 
@@ -516,33 +528,78 @@ const Dashboard = {
 
                 </div>
 
-            `;
+
+                <div class="question-options">
+
+                    <div class="options-title">
+                        選項內容
+                    </div>
+
+                    ${choices.map(
+                        (choice, choiceIndex) => {
+
+                            const letter =
+                                String.fromCharCode(
+                                    65 + choiceIndex
+                                );
 
 
-            container.appendChild(card);
+                            return `
+
+                                <div class="
+                                    option-description
+                                    ${
+                                        letter ===
+                                        question.answer
+                                            ? "correct-option"
+                                            : ""
+                                    }
+                                ">
+
+                                    <span
+                                        class="option-letter"
+                                    >
+                                        ${letter}
+                                    </span>
+
+                                    <span
+                                        class="option-text"
+                                    >
+                                        ${this.escapeHTML(
+                                            choice
+                                        )}
+                                    </span>
+
+                                </div>
+
+                            `;
+
+                        }
+                    ).join("")}
+
+                </div>
+
+            </div>
+
+        `;
 
 
-            /*
-             * 取得此題答案統計
-             */
-
-            const counts =
-                this.calculateQuestionCounts(
-                    questionNumber - 1
-                );
+        container.appendChild(card);
 
 
-            /*
-             * 建立長條圖
-             */
-
-            this.renderQuestionChart(
-                `questionChart-${questionNumber}`,
-                counts
+        const counts =
+            this.calculateQuestionCounts(
+                index
             );
 
-        });
-    },
+
+        this.renderQuestionChart(
+            `questionChart-${questionNumber}`,
+            counts
+        );
+
+    });
+},
 
 
     /* =====================================================
