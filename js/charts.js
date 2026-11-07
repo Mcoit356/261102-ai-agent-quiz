@@ -523,28 +523,7 @@
 
                             border: {
                                 display: false
-                            },
-
-                            title: {
-    display: true,
-
-    text: "人數",
-
-    color: "#374151",
-
-    font: {
-        family: FONT_FAMILY,
-        size: 12,
-        weight: "700"
-    },
-
-    padding: {
-        bottom: 8
-    },
-
-    // 強制 Y 軸標題保持水平
-    rotation: 90
-}
+                            }
                         }
                     },
 
@@ -557,6 +536,19 @@
                     }
                 }
             });
+
+           const yAxisTitle = document.createElement("div");
+
+yAxisTitle.className = "question-y-axis-title";
+
+yAxisTitle.innerHTML = `
+    <span>人</span>
+    <span>數</span>
+`;
+
+canvas.parentElement.style.position = "relative";
+
+canvas.parentElement.appendChild(yAxisTitle);
 
             chartRegistry.set(
                 canvasId,
