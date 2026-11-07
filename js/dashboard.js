@@ -93,12 +93,17 @@ const Dashboard = {
 
         } catch (error) {
 
-            console.error("Dashboard 載入失敗：", error);
+    console.error("Dashboard 載入失敗：", error);
 
-            this.showErrorState(
-                "資料載入失敗，請確認 Apps Script API 是否正常。"
-            );
-        }
+    const message =
+        error && error.message
+            ? error.message
+            : "未知錯誤";
+
+    this.showErrorState(
+        `資料載入失敗：${message}`
+    );
+}
     },
 
 
