@@ -38,6 +38,27 @@
    TABLET
 ========================================================= */
 
+@media (max-width: 1200px) {
+
+    .sidebar-header {
+        padding: 0 14px 0 16px;
+        gap: 10px;
+    }
+
+    .brand-text {
+        overflow: hidden;
+    }
+
+    .brand-text strong,
+    .brand-text span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+}
+
+
 @media (max-width: 900px) {
 
     .sidebar {
@@ -112,6 +133,7 @@
        JS 目前會加：
        body.sidebar-open
     */
+
     body.sidebar-open .sidebar {
         transform: translateX(0) !important;
 
@@ -123,6 +145,7 @@
        同時支援原本的 mobile-open
        防止其他程式碼使用這個 class
     */
+
     .sidebar.mobile-open {
         transform: translateX(0) !important;
 
@@ -138,7 +161,8 @@
     }
 
     .sidebar-header {
-        padding: 0 18px;
+        padding: 0 14px 0 18px;
+        gap: 10px;
         overflow: visible;
     }
 
@@ -150,9 +174,15 @@
         font-size: 14px;
     }
 
+    .brand-text {
+        overflow: hidden;
+    }
+
     .brand-text strong,
     .brand-text span {
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
 
@@ -249,7 +279,7 @@
 
         gap: 12px;
 
-        background: #ffffff;
+        background: var(--bg-card);
 
         border-bottom:
             1px solid var(--border);
@@ -292,11 +322,11 @@
         justify-content: center;
 
         border:
-            1px solid #e5e7eb;
+            1px solid var(--border);
 
         border-radius: 9px;
 
-        background: #f3f4f6;
+        background: var(--bg-soft);
 
         color: var(--text-main);
 
@@ -323,7 +353,7 @@
 
 
     .mobile-menu-btn:hover {
-        background: #e5e7eb;
+        background: var(--border);
     }
 
 
