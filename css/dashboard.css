@@ -70,6 +70,8 @@ body {
 /* Brand */
 
 .sidebar-header {
+    flex-shrink: 0;
+    box-sizing: border-box;
     height: 82px;
 
     display: flex;
@@ -83,8 +85,16 @@ body {
 }
 
 .brand-icon {
+    flex: 0 0 40px;
     width: 40px;
     height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 0;
+    overflow: visible;
+    line-height: 1;
+    white-space: nowrap;
 
     display: flex;
     align-items: center;
@@ -102,6 +112,7 @@ body {
 .brand-text {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .brand-text strong {
