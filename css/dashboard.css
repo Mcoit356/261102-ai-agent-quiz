@@ -17,6 +17,19 @@
     --primary: #4f46e5;
     --primary-soft: #eef2ff;
 
+    --bg-soft: #f3f4f6;
+    --bg-subtle: #fafafa;
+    --row-hover: #fafbff;
+    --divider: #f0f0f0;
+
+    --ok-bg: #f0fdf4;
+    --ok-border: #bbf7d0;
+    --ok-letter-bg: #dcfce7;
+    --ok-letter-text: #15803d;
+
+    --bad-bg: #fef2f2;
+    --bad-border: #fecaca;
+
     --success: #16a34a;
     --warning: #d97706;
     --danger: #dc2626;
@@ -56,7 +69,7 @@ body {
     width: var(--sidebar-width);
     height: 100vh;
 
-    background: #ffffff;
+    background: var(--bg-card);
 
     border-right: 1px solid var(--border);
 
@@ -166,7 +179,7 @@ body {
 }
 
 .nav-item:hover {
-    background: #f3f4f6;
+    background: var(--bg-soft);
     color: var(--text-main);
 }
 
@@ -478,7 +491,7 @@ body {
 
     border-radius: 8px;
 
-    background: #f3f4f6;
+    background: var(--bg-soft);
 
     color: var(--text-secondary) !important;
 
@@ -546,7 +559,7 @@ body {
 
     padding: 13px 0;
 
-    border-bottom: 1px solid #f1f1f1;
+    border-bottom: 1px solid var(--divider);
 }
 
 .class-list-item:last-child {
@@ -613,11 +626,33 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
-.question-number {
-    min-width: 42px;
-    height: 28px;
+.question-heading {
+    flex: 1;
+    min-width: 0;
 
-    padding: 0 8px;
+    display: flex;
+    align-items: flex-start;
+
+    gap: 12px;
+}
+
+.question-heading h3 {
+    margin: 0;
+
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+/* 題號標籤:固定大小,長寬比 2:1 */
+.question-number {
+    flex: 0 0 52px;
+
+    width: 52px;
+    height: 26px;
+    min-width: 52px;
+
+    padding: 0;
+    box-sizing: border-box;
 
     display: flex;
     align-items: center;
@@ -646,6 +681,15 @@ body {
     color: var(--success);
 
     white-space: nowrap;
+}
+
+.question-rate {
+    margin-left: 8px;
+
+    font-size: 11px;
+    font-weight: 400;
+
+    color: var(--text-secondary);
 }
 
 .question-chart {
@@ -681,7 +725,7 @@ body {
 
     padding: 0 14px;
 
-    background: white;
+    background: var(--bg-card);
 
     border: 1px solid var(--border);
 
@@ -712,7 +756,7 @@ body {
 
     border-radius: 10px;
 
-    background: white;
+    background: var(--bg-card);
 
     color: var(--text-main);
 
@@ -747,7 +791,7 @@ body {
 .student-table th {
     padding: 13px 20px;
 
-    background: #fafafa;
+    background: var(--bg-subtle);
 
     color: var(--text-muted);
 
@@ -763,7 +807,7 @@ body {
 .student-table td {
     padding: 15px 20px;
 
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid var(--divider);
 
     font-size: 12px;
 
@@ -775,7 +819,7 @@ body {
 }
 
 .student-table tbody tr:hover {
-    background: #fafbff;
+    background: var(--row-hover);
 }
 
 .score-badge {
@@ -911,15 +955,15 @@ body {
 }
 
 .answer-item.correct {
-    border-color: #bbf7d0;
+    border-color: var(--ok-border);
 
-    background: #f0fdf4;
+    background: var(--ok-bg);
 }
 
 .answer-item.wrong {
-    border-color: #fecaca;
+    border-color: var(--bad-border);
 
-    background: #fef2f2;
+    background: var(--bad-bg);
 }
 
 .answer-q {
@@ -1019,7 +1063,7 @@ body {
 
     gap: 12px;
 
-    background: white;
+    background: var(--bg-card);
 
     border: 1px solid var(--border);
 
@@ -1034,7 +1078,7 @@ body {
     width: 26px;
     height: 26px;
 
-    border: 3px solid #e5e7eb;
+    border: 3px solid var(--border);
 
     border-top-color: var(--primary);
 
@@ -1084,7 +1128,7 @@ body {
 
     overflow-y: auto;
 
-    background: white;
+    background: var(--bg-card);
 
     border-radius: 18px;
 
@@ -1105,7 +1149,7 @@ body {
 
     border-radius: 8px;
 
-    background: #f3f4f6;
+    background: var(--bg-soft);
 
     color: var(--text-secondary);
 
@@ -1118,50 +1162,131 @@ body {
 
 
 /* =========================================================
-   DARK MODE SUPPORT
+   THEME TOGGLE BUTTON
 ========================================================= */
 
-body.dark-mode {
-    --bg-main: #111827;
-    --bg-card: #1f2937;
+.theme-toggle {
+    flex: 0 0 34px;
 
-    --text-main: #f9fafb;
-    --text-secondary: #9ca3af;
-    --text-muted: #6b7280;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
 
-    --border: #374151;
+    margin-left: auto;
+    padding: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    background: var(--bg-soft);
+    color: var(--text-secondary);
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease;
+
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
-body.dark-mode .sidebar,
-body.dark-mode .search-box,
-body.dark-mode .filter-select,
-body.dark-mode .student-modal {
-    background: #1f2937;
+.theme-toggle:hover {
+    color: var(--primary);
+    border-color: var(--primary);
 }
 
-body.dark-mode .nav-item:hover {
-    background: #374151;
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
-body.dark-mode .student-table th {
-    background: #111827;
+.theme-toggle svg {
+    width: 18px;
+    height: 18px;
+    display: block;
 }
 
-body.dark-mode .student-table tbody tr:hover {
-    background: #263244;
+/* 淺色模式顯示月亮(點了變深色),深色模式顯示太陽 */
+.theme-toggle .icon-sun {
+    display: none;
 }
 
-body.dark-mode .student-table td {
-    border-color: #374151;
+html[data-theme="dark"] .theme-toggle .icon-sun {
+    display: block;
 }
 
-body.dark-mode .class-list-item {
-    border-color: #374151;
+html[data-theme="dark"] .theme-toggle .icon-moon {
+    display: none;
 }
 
-body.dark-mode .modal-close {
-    background: #374151;
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg-main: #0f172a;
+    --bg-card: #1e293b;
+
+    --text-main: #f1f5f9;
+    --text-secondary: #a5b0c2;
+    --text-muted: #7b879b;
+
+    --border: #334155;
+
+    --primary: #6366f1;
+    --primary-soft: rgba(99, 102, 241, 0.18);
+
+    --bg-soft: #334155;
+    --bg-subtle: #172033;
+    --row-hover: #263449;
+    --divider: #2b3a50;
+
+    --ok-bg: rgba(22, 163, 74, 0.14);
+    --ok-border: rgba(34, 197, 94, 0.45);
+    --ok-letter-bg: rgba(34, 197, 94, 0.22);
+    --ok-letter-text: #4ade80;
+
+    --bad-bg: rgba(220, 38, 38, 0.14);
+    --bad-border: rgba(248, 113, 113, 0.45);
+
+    --shadow:
+        0 4px 16px rgba(0, 0, 0, 0.35);
 }
+
+html[data-theme="dark"] body {
+    background: var(--bg-main);
+    color: var(--text-main);
+}
+
+html[data-theme="dark"] .search-box,
+html[data-theme="dark"] .filter-select,
+html[data-theme="dark"] .student-modal {
+    background: var(--bg-card);
+    color: var(--text-main);
+}
+
+html[data-theme="dark"] .search-box input {
+    background: transparent;
+    color: var(--text-main);
+}
+
+html[data-theme="dark"] .modal-overlay {
+    background: rgba(2, 6, 23, 0.65);
+}
+
+html[data-theme="dark"] .mobile-header {
+    background: var(--bg-card);
+}
+
 
 /* =========================================================
    QUESTION ANALYSIS - NEW LAYOUT
@@ -1200,7 +1325,7 @@ body.dark-mode .modal-close {
 
     border-left: 1px solid var(--border);
 
-    background: #fafafa;
+    background: var(--bg-subtle);
 }
 
 
@@ -1228,7 +1353,7 @@ body.dark-mode .modal-close {
 
     border-radius: 9px;
 
-    background: white;
+    background: var(--bg-card);
 
     border: 1px solid var(--border);
 
@@ -1240,9 +1365,9 @@ body.dark-mode .modal-close {
 
 .option-description.correct-option {
 
-    border-color: #bbf7d0;
+    border-color: var(--ok-border);
 
-    background: #f0fdf4;
+    background: var(--ok-bg);
 }
 
 
@@ -1262,7 +1387,7 @@ body.dark-mode .modal-close {
 
     border-radius: 6px;
 
-    background: #f3f4f6;
+    background: var(--bg-soft);
 
     font-size: 11px;
 
@@ -1272,17 +1397,43 @@ body.dark-mode .modal-close {
 
 .correct-option .option-letter {
 
-    background: #dcfce7;
+    background: var(--ok-letter-bg);
 
-    color: #15803d;
+    color: var(--ok-letter-text);
+}
+
+
+.option-body {
+
+    flex: 1;
+
+    min-width: 0;
 }
 
 
 .option-text {
 
-    flex: 1;
+    display: block;
 
     color: var(--text-secondary);
+}
+
+
+.option-stat {
+
+    margin-top: 4px;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    color: var(--text-muted);
+}
+
+
+.correct-option .option-stat {
+
+    color: var(--ok-letter-text);
 }
 
 
