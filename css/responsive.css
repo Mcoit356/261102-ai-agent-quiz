@@ -132,6 +132,25 @@
     }
 
 
+    .sidebar-header {
+        padding: 0 18px;
+        overflow: visible;
+    }
+
+    .brand-icon {
+        flex: 0 0 40px;
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        font-size: 14px;
+    }
+
+    .brand-text strong,
+    .brand-text span {
+        white-space: nowrap;
+    }
+
+
     /* =====================================================
        SIDEBAR OVERLAY
     ===================================================== */
