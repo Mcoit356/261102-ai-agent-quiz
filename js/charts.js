@@ -80,6 +80,73 @@
     const chartRegistry = new Map();
 
 
+    /* =====================================================
+       深色 / 淺色模式配色
+    ===================================================== */
+
+    function getThemeColors() {
+        const isDark =
+            document.documentElement.getAttribute("data-theme") === "dark";
+
+        return isDark
+            ? {
+                text: "#e2e8f0",
+                muted: "#94a3b8",
+                grid: "rgba(148, 163, 184, 0.18)",
+                card: "#1e293b"
+            }
+            : {
+                text: "#374151",
+                muted: "#6B7280",
+                grid: "rgba(107, 114, 128, 0.12)",
+                card: "#FFFFFF"
+            };
+    }
+
+    // theme.js 切換主題時會呼叫,讓已存在的圖表立刻換色
+    window.refreshChartTheme = function () {
+        const colors = getThemeColors();
+
+        chartRegistry.forEach(function (chart) {
+            try {
+                const options = chart.options || {};
+                const legend =
+                    options.plugins && options.plugins.legend;
+
+                if (legend && legend.labels) {
+                    legend.labels.color = colors.text;
+                }
+
+                if (chart.config.type === "doughnut") {
+                    chart.data.datasets.forEach(function (dataset) {
+                        dataset.borderColor = colors.card;
+                    });
+                }
+
+                if (options.scales) {
+                    if (options.scales.x && options.scales.x.ticks) {
+                        options.scales.x.ticks.color = colors.text;
+                    }
+
+                    if (options.scales.y) {
+                        if (options.scales.y.ticks) {
+                            options.scales.y.ticks.color = colors.muted;
+                        }
+
+                        if (options.scales.y.grid) {
+                            options.scales.y.grid.color = colors.grid;
+                        }
+                    }
+                }
+
+                chart.update("none");
+            } catch (error) {
+                console.warn("Chart theme refresh error:", error);
+            }
+        });
+    };
+
+
     function destroyChart(canvasId) {
         const oldChart = chartRegistry.get(canvasId);
 
@@ -275,7 +342,7 @@
                                     ]
                             ),
 
-                            borderColor: "#FFFFFF",
+                            borderColor: getThemeColors().card,
 
                             borderWidth: 2,
 
@@ -308,7 +375,7 @@
 
                                 padding: 12,
 
-                                color: "#374151",
+                                color: getThemeColors().text,
 
                                 font: {
                                     family: FONT_FAMILY,
@@ -482,7 +549,7 @@
                             },
 
                             ticks: {
-                                color: "#374151",
+                                color: getThemeColors().text,
 
                                 font: {
                                     family: FONT_FAMILY,
@@ -506,7 +573,7 @@
 
                                 stepSize: 1,
 
-                                color: "#6B7280",
+                                color: getThemeColors().muted,
 
                                 font: {
                                     family: FONT_FAMILY,
@@ -516,7 +583,7 @@
                             },
 
                             grid: {
-                                color: "rgba(107, 114, 128, 0.12)",
+                                color: getThemeColors().grid,
 
                                 drawBorder: false
                             },
@@ -694,7 +761,7 @@ chartStyle.textContent = `
 
     gap: 0;
 
-    color: #374151;
+    color: var(--text-main);
 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
         "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
