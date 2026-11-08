@@ -885,6 +885,41 @@ renderAnalysis() {
             QUESTION_CHOICES[index] || [];
 
 
+        /*
+         * 先算出各選項人數與答對率
+         */
+
+        const counts =
+            this.calculateQuestionCounts(
+                index
+            );
+
+        const totalAnswered =
+            Object.values(counts).reduce(
+                (sum, value) => sum + value,
+                0
+            );
+
+        const correctLetter =
+            String(question.answer || "")
+                .trim()
+                .toUpperCase();
+
+        const correctCount =
+            counts[correctLetter] || 0;
+
+        const formatPercent = (value) =>
+            totalAnswered
+                ? Math.round(
+                    (value / totalAnswered) * 100
+                )
+                : 0;
+
+        const correctRateText =
+            `答對率: ${correctCount}/${totalAnswered} 人 ` +
+            `(${formatPercent(correctCount)}%)`;
+
+
         const card =
             document.createElement("article");
 
@@ -920,6 +955,10 @@ renderAnalysis() {
                             question.answer || "-"
                         )}
                     </strong>
+
+                    <small class="question-rate">
+                        ${correctRateText}
+                    </small>
 
                 </div>
 
@@ -970,13 +1009,22 @@ renderAnalysis() {
                                         ${letter}
                                     </span>
 
-                                    <span
-                                        class="option-text"
-                                    >
-                                        ${this.escapeHTML(
-                                            choice
-                                        )}
-                                    </span>
+                                    <div class="option-body">
+
+                                        <span
+                                            class="option-text"
+                                        >
+                                            ${this.escapeHTML(
+                                                choice
+                                            )}
+                                        </span>
+
+                                        <div class="option-stat">
+                                            選擇 ${counts[letter] || 0} 人
+                                            (${formatPercent(counts[letter] || 0)}%)
+                                        </div>
+
+                                    </div>
 
                                 </div>
 
@@ -993,12 +1041,6 @@ renderAnalysis() {
 
 
         container.appendChild(card);
-
-
-        const counts =
-            this.calculateQuestionCounts(
-                index
-            );
 
 
         this.renderQuestionChart(
