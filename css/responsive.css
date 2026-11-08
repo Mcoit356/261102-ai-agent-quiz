@@ -112,7 +112,6 @@
        JS 目前會加：
        body.sidebar-open
     */
-
     body.sidebar-open .sidebar {
         transform: translateX(0) !important;
 
@@ -124,13 +123,19 @@
        同時支援原本的 mobile-open
        防止其他程式碼使用這個 class
     */
-
     .sidebar.mobile-open {
         transform: translateX(0) !important;
 
         pointer-events: auto;
     }
 
+
+    /* 手機版頂部標題列(58px)是 fixed 且 z-index 最高,
+       會蓋住側邊欄頂端,所以把側邊欄內容往下推 */
+    .sidebar {
+        padding-top: 58px;
+        box-sizing: border-box;
+    }
 
     .sidebar-header {
         padding: 0 18px;
@@ -484,6 +489,7 @@
 
     .sidebar {
         width: 240px !important;
+        padding-top: 56px;
     }
 
 
