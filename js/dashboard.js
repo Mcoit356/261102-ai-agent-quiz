@@ -1483,13 +1483,13 @@ renderAnalysis() {
 
                 <td>
                     ${this.escapeHTML(
-                        student.aiSpecial || "-"
+                        student.aiSpecial || "未填寫"
                     )}
                 </td>
 
                 <td>
                     ${this.escapeHTML(
-                        student.satisfaction || "-"
+                        student.satisfaction || "未填寫"
                     )}
                 </td>
 
@@ -1895,16 +1895,16 @@ renderAnalysis() {
                         </div>
 
                         <div>
-                            <span>AI 選擇</span>
+                            <span>最喜愛的 AI</span>
                             <strong>
-                                ${this.escapeHTML(student.aiSpecial || "-")}
+                                ${this.escapeHTML(student.aiSpecial || "未填寫")}
                             </strong>
                         </div>
 
                         <div>
                             <span>滿意度</span>
                             <strong>
-                                ${this.escapeHTML(student.satisfaction || "-")}
+                                ${this.escapeHTML(student.satisfaction || "未填寫")}
                             </strong>
                         </div>
 
