@@ -223,6 +223,13 @@ const Dashboard = {
 
             this.renderTimeline();
 
+            if (window.Reports) {
+                Reports.init(
+                    this.state.students,
+                    this.state.questions
+                );
+            }
+
 
             this.hideLoadingState();
 
@@ -1058,7 +1065,7 @@ renderAnalysis() {
        QUESTION ANSWER COUNT
     ===================================================== */
 
-    calculateQuestionCounts(questionIndex) {
+    calculateQuestionCounts(questionIndex, students) {
 
         const counts = {
             A: 0,
@@ -1068,7 +1075,7 @@ renderAnalysis() {
         };
 
 
-        this.state.students.forEach(student => {
+        (students || this.state.students).forEach(student => {
 
             if (
                 !Array.isArray(student.answers)
@@ -1895,7 +1902,7 @@ renderAnalysis() {
                         </div>
 
                         <div>
-                            <span>測驗滿意度</span>
+                            <span>滿意度</span>
                             <strong>
                                 ${this.escapeHTML(student.satisfaction || "-")}
                             </strong>
