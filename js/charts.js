@@ -117,6 +117,16 @@
                     legend.labels.color = colors.text;
                 }
 
+                if (chart.config.type === "line") {
+                    chart.data.datasets.forEach(function (dataset) {
+                        dataset.pointBorderColor = colors.card;
+                    });
+                }
+
+                if (options.scales && options.scales.x && options.scales.x.title) {
+                    options.scales.x.title.color = colors.text;
+                }
+
                 if (chart.config.type === "doughnut") {
                     chart.data.datasets.forEach(function (dataset) {
                         dataset.borderColor = colors.card;
@@ -685,6 +695,172 @@ canvas.parentElement.appendChild(yAxisTitle);
     }
 
 
+
+    /* =====================================================
+       建立填寫時間線 (折線圖)
+
+       labels: ["11/01", "11/02", ...]
+       values: [3, 0, 8, ...]
+    ===================================================== */
+
+    async function renderTimelineChart(labels, values) {
+        const canvas = document.getElementById(
+            "studentTimelineChart"
+        );
+
+        if (!canvas) {
+            console.warn(
+                "找不到 canvas：#studentTimelineChart"
+            );
+
+            return null;
+        }
+
+        try {
+            const Chart = await loadChartJS();
+
+            destroyChart("studentTimelineChart");
+
+            const ctx = canvas.getContext("2d");
+
+            if (!ctx) {
+                return null;
+            }
+
+            const colors = getThemeColors();
+
+            const chart = new Chart(ctx, {
+                type: "line",
+
+                data: {
+                    labels: Array.isArray(labels) ? labels : [],
+
+                    datasets: [
+                        {
+                            label: "填寫人數",
+
+                            data: Array.isArray(values)
+                                ? values.map(normalizeNumber)
+                                : [],
+
+                            borderColor: "#4f46e5",
+                            backgroundColor:
+                                "rgba(79, 70, 229, 0.12)",
+
+                            borderWidth: 2.5,
+
+                            tension: 0.3,
+
+                            fill: true,
+
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: "#4f46e5",
+                            pointBorderColor: colors.card,
+                            pointBorderWidth: 2
+                        }
+                    ]
+                },
+
+                options: {
+                    responsive: true,
+
+                    maintainAspectRatio: false,
+
+                    interaction: {
+                        mode: "index",
+                        intersect: false
+                    },
+
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+
+                        tooltip: getTooltipConfig()
+                    },
+
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+
+                            ticks: {
+                                color: colors.text,
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 10,
+                                font: {
+                                    family: FONT_FAMILY,
+                                    size: 11
+                                }
+                            },
+
+                            title: {
+                                display: true,
+                                text: "日期",
+                                color: colors.text,
+                                font: {
+                                    family: FONT_FAMILY,
+                                    size: 12,
+                                    weight: "700"
+                                }
+                            }
+                        },
+
+                        y: {
+                            beginAtZero: true,
+
+                            grid: {
+                                color: colors.grid
+                            },
+
+                            ticks: {
+                                color: colors.muted,
+                                precision: 0,
+                                font: {
+                                    family: FONT_FAMILY,
+                                    size: 11
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // y 軸標題:與分析模塊相同,「人」「數」直立排列、文字不旋轉
+            const wrapper = canvas.parentElement;
+
+            wrapper.style.position = "relative";
+
+            wrapper
+                .querySelectorAll(".question-y-axis-title")
+                .forEach((el) => el.remove());
+
+            const yAxisTitle = document.createElement("div");
+
+            yAxisTitle.className = "question-y-axis-title";
+
+            yAxisTitle.innerHTML = `
+                <span>人</span>
+                <span>數</span>
+            `;
+
+            wrapper.appendChild(yAxisTitle);
+
+            chartRegistry.set("studentTimelineChart", chart);
+
+            return chart;
+
+        } catch (error) {
+            console.error("建立時間線圖表失敗：", error);
+
+            return null;
+        }
+    }
+
+
     /* =====================================================
        重新調整所有圖表
     ===================================================== */
@@ -732,6 +908,9 @@ canvas.parentElement.appendChild(yAxisTitle);
 
     window.renderQuestionBarChart =
         renderQuestionBarChart;
+
+    window.renderTimelineChart =
+        renderTimelineChart;
 
     window.updateQuestionBarChart =
         updateQuestionBarChart;
