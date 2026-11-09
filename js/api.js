@@ -23,27 +23,27 @@
  */
 function getApiUrl() {
 
-  if (
-    typeof CONFIG === "undefined" ||
-    !CONFIG.API_URL
-  ) {
-    throw new Error(
-      "找不到 CONFIG.API_URL，請確認 config/config.js 是否正確載入。"
-    );
+  // 讀取網址參數 ?data=xxx
+  const dataName = new URLSearchParams(window.location.search).get("data");
+
+  if (dataName) {
+    // 只允許英數、底線、減號,避免被亂塞路徑
+    if (!/^[A-Za-z0-9_-]+$/.test(dataName)) {
+      throw new Error("data 參數格式不正確。");
+    }
+    // ?data=test → data_test.json(跟 index.html 同一層)
+    return `data_${dataName}.json`;
   }
 
-  if (
-    CONFIG.API_URL === "YOUR_APPS_SCRIPT_WEB_APP_URL"
-  ) {
-    throw new Error(
-      "尚未設定 Apps Script API URL，請修改 config/config.js。"
-    );
+  // 沒有 ?data 就維持原本的 Apps Script API
+  if (typeof CONFIG === "undefined" || !CONFIG.API_URL) {
+    throw new Error("找不到 CONFIG.API_URL,請確認 config.js 是否正確載入。");
   }
-
+  if (CONFIG.API_URL === "YOUR_APPS_SCRIPT_WEB_APP_URL") {
+    throw new Error("尚未設定 Apps Script API URL,請修改 config.js。");
+  }
   return CONFIG.API_URL;
-
 }
-
 
 /**
  * ============================================================
