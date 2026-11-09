@@ -164,6 +164,7 @@ const Reports = {
         this.renderKpi(filtered);
         this.renderScoreChart(filtered);
         this.renderGroupChart(filtered);
+        this.renderOptional(filtered);
         this.renderQuestions(filtered);
         this.renderSummary(filtered);
     },
@@ -213,6 +214,11 @@ const Reports = {
     /* ---------------------------------------------
        CHART HELPERS
     --------------------------------------------- */
+
+    /* 圖表文字：電腦版 14px，手機 11px */
+    fontSize() {
+        return window.innerWidth >= 900 ? 14 : 11;
+    },
 
     themeColors() {
 
@@ -328,11 +334,16 @@ const Reports = {
                 scales: {
                     x: {
                         grid: { display: false },
-                        ticks: { color: colors.text, maxRotation: 0 },
+                        ticks: {
+                            color: colors.text,
+                            maxRotation: 0,
+                            font: { size: this.fontSize() }
+                        },
                         title: {
                             display: true,
                             text: "分數（每 2 分一格）",
-                            color: colors.muted
+                            color: colors.muted,
+                            font: { size: this.fontSize() }
                         }
                     },
                     y: {
@@ -341,12 +352,14 @@ const Reports = {
                         ticks: {
                             color: colors.text,
                             precision: 0,
-                            stepSize: 1
+                            stepSize: 1,
+                            font: { size: this.fontSize() }
                         },
                         title: {
                             display: true,
                             text: "人數",
-                            color: colors.muted
+                            color: colors.muted,
+                            font: { size: this.fontSize() }
                         }
                     }
                 }
@@ -450,7 +463,8 @@ const Reports = {
                         labels: {
                             color: colors.text,
                             boxWidth: 12,
-                            usePointStyle: true
+                            usePointStyle: true,
+                            font: { size: this.fontSize() }
                         }
                     },
                     tooltip: {
@@ -465,11 +479,15 @@ const Reports = {
                 scales: {
                     x: {
                         grid: { display: false },
-                        ticks: { color: colors.text },
+                        ticks: {
+                            color: colors.text,
+                            font: { size: this.fontSize() }
+                        },
                         title: {
                             display: true,
                             text: "小組",
-                            color: colors.muted
+                            color: colors.muted,
+                            font: { size: this.fontSize() }
                         }
                     },
                     y: {
@@ -478,17 +496,171 @@ const Reports = {
                         ticks: {
                             color: colors.text,
                             precision: 0,
-                            stepSize: 1
+                            stepSize: 1,
+                            font: { size: this.fontSize() }
                         },
                         title: {
                             display: true,
                             text: "人數",
-                            color: colors.muted
+                            color: colors.muted,
+                            font: { size: this.fontSize() }
                         }
                     }
                 }
             }
         });
+    },
+
+
+    /* ---------------------------------------------
+       選填欄位：表單滿意度 / 最喜愛的 AI（空白 = 未填寫）
+    --------------------------------------------- */
+
+    isBlank(value) {
+
+        const text = String(value ?? "").trim();
+
+        return text === "" || text === "-";
+    },
+
+    /* 統計某欄位各值人數，空白歸為「未填寫」（固定放最後） */
+    tally(filtered, field, sorter) {
+
+        const map = new Map();
+        let blank = 0;
+
+        filtered.forEach(student => {
+
+            const value = student[field];
+
+            if (this.isBlank(value)) {
+                blank += 1;
+                return;
+            }
+
+            const key = String(value).trim();
+            map.set(key, (map.get(key) || 0) + 1);
+        });
+
+        const rows = [...map.entries()]
+            .map(([label, count]) => ({ label, count }))
+            .sort(sorter);
+
+        return { rows, blank };
+    },
+
+    barRows(rows, blank, totalCount, labelFormatter) {
+
+        const esc = value => Dashboard.escapeHTML(value);
+
+        const all = [
+            ...rows.map(row => ({ ...row, empty: false })),
+            { label: "未填寫", count: blank, empty: true }
+        ];
+
+        const max = Math.max(...all.map(row => row.count), 1);
+
+        return all.map(row => {
+
+            const percent = totalCount
+                ? Math.round((row.count / totalCount) * 100)
+                : 0;
+
+            const width = row.count
+                ? Math.max((row.count / max) * 100, 3)
+                : 0;
+
+            const label = row.empty
+                ? row.label
+                : (labelFormatter ? labelFormatter(row.label) : row.label);
+
+            return `
+                <div class="report-bar-row ${row.empty ? "is-empty" : ""}">
+                    <span class="report-bar-label">${esc(label)}</span>
+                    <div class="report-bar-track">
+                        <div
+                            class="report-bar-fill"
+                            style="width:${width}%"
+                        ></div>
+                    </div>
+                    <span class="report-bar-value">
+                        ${row.count} 人（${percent}%）
+                    </span>
+                </div>
+            `;
+
+        }).join("");
+    },
+
+    renderOptional(filtered) {
+
+        const satList = document.getElementById("report-satisfaction-list");
+        const aiList = document.getElementById("report-ai-list");
+
+        if (!satList || !aiList) return;
+
+        if (!filtered.length) {
+            const empty =
+                '<div class="empty-state">沒有符合條件的測驗者</div>';
+            satList.innerHTML = empty;
+            aiList.innerHTML = empty;
+            this.setText("report-satisfaction-summary", "選填欄位");
+            this.setText("report-ai-summary", "選填欄位");
+            return;
+        }
+
+        /* 滿意度：數字由小到大 */
+        const sat = this.tally(
+            filtered,
+            "satisfaction",
+            (a, b) => {
+                const na = Number(a.label), nb = Number(b.label);
+                return !Number.isNaN(na) && !Number.isNaN(nb)
+                    ? na - nb
+                    : a.label.localeCompare(b.label, "zh-Hant");
+            }
+        );
+
+        satList.innerHTML = this.barRows(
+            sat.rows, sat.blank, filtered.length,
+            label => `滿意度 ${label}`
+        );
+
+        const numbers = filtered
+            .map(s => s.satisfaction)
+            .filter(v => !this.isBlank(v))
+            .map(Number)
+            .filter(n => !Number.isNaN(n));
+
+        this.setText(
+            "report-satisfaction-summary",
+            numbers.length
+                ? `已填 ${numbers.length} 人　平均 ` +
+                  `${(numbers.reduce((a, b) => a + b, 0) / numbers.length).toFixed(2)}` +
+                  `　未填寫 ${sat.blank} 人`
+                : `尚無人填寫（未填寫 ${sat.blank} 人）`
+        );
+
+        /* 最喜愛的 AI：人數多到少 */
+        const ai = this.tally(
+            filtered,
+            "aiSpecial",
+            (a, b) =>
+                b.count - a.count ||
+                a.label.localeCompare(b.label, "zh-Hant")
+        );
+
+        aiList.innerHTML = this.barRows(
+            ai.rows, ai.blank, filtered.length
+        );
+
+        this.setText(
+            "report-ai-summary",
+            ai.rows.length
+                ? `最多人喜愛：${ai.rows[0].label}（${ai.rows[0].count} 人）` +
+                  `　未填寫 ${ai.blank} 人`
+                : `尚無人填寫（未填寫 ${ai.blank} 人）`
+        );
     },
 
 
@@ -654,10 +826,6 @@ const Reports = {
                         （${st.wrongCount} 人）
                     </span>`
                     : `<span class="detail-chip">最常見錯誤選項：無</span>`
-            );
-
-            chips.push(
-                `<span class="detail-chip">未作答 ${st.unanswered} 人</span>`
             );
 
             const card = document.createElement("article");
@@ -898,6 +1066,47 @@ const Reports = {
                 </li>
             `);
         }
+
+        /* 選填欄位 */
+        const satNums = filtered
+            .map(st => st.satisfaction)
+            .filter(v => !this.isBlank(v))
+            .map(Number)
+            .filter(n => !Number.isNaN(n));
+
+        const satBlank = filtered.filter(
+            st => this.isBlank(st.satisfaction)
+        ).length;
+
+        items.push(`
+            <li>
+                <strong>表單滿意度（選填）：</strong>
+                ${satNums.length
+                    ? `已填 ${satNums.length} 人，平均 ` +
+                      `${(satNums.reduce((a, b) => a + b, 0) / satNums.length).toFixed(2)}，` +
+                      `未填寫 ${satBlank} 人。`
+                    : `尚無人填寫（未填寫 ${satBlank} 人）。`}
+            </li>
+        `);
+
+        const aiTally = this.tally(
+            filtered,
+            "aiSpecial",
+            (a, b) =>
+                b.count - a.count ||
+                a.label.localeCompare(b.label, "zh-Hant")
+        );
+
+        items.push(`
+            <li>
+                <strong>最喜愛的 AI（選填）：</strong>
+                ${aiTally.rows.length
+                    ? `${aiTally.rows.slice(0, 3).map(
+                        r => `${esc(r.label)}（${r.count} 人）`
+                      ).join("、")}，未填寫 ${aiTally.blank} 人。`
+                    : `尚無人填寫（未填寫 ${aiTally.blank} 人）。`}
+            </li>
+        `);
 
         const groupRank = this.averageBy(filtered, "group", "未分組");
         const classRank = this.averageBy(filtered, "class", "未填班級");
