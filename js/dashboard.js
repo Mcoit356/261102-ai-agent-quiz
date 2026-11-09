@@ -221,6 +221,8 @@ const Dashboard = {
 
             this.renderStudents();
 
+            this.renderTimeline();
+
 
             this.hideLoadingState();
 
@@ -1222,6 +1224,165 @@ renderAnalysis() {
     /* =====================================================
        STUDENTS
     ===================================================== */
+
+    /* =====================================================
+       TIMELINE (填寫時間線)
+       x: 日期 / y: 當天填寫人數
+    ===================================================== */
+
+    // 從 "2026/11/8 下午 3:21:05"、"2026-11-08T..." 等格式取出日期
+    parseDateKey(value) {
+
+        if (value === null || value === undefined) {
+            return null;
+        }
+
+        const text = String(value).trim();
+
+        const match = text.match(
+            /(\d{4})\s*[\/\-.年]\s*(\d{1,2})\s*[\/\-.月]\s*(\d{1,2})/
+        );
+
+        if (match) {
+            return new Date(
+                Number(match[1]),
+                Number(match[2]) - 1,
+                Number(match[3])
+            );
+        }
+
+        const parsed = new Date(text);
+
+        if (isNaN(parsed.getTime())) {
+            return null;
+        }
+
+        return new Date(
+            parsed.getFullYear(),
+            parsed.getMonth(),
+            parsed.getDate()
+        );
+    },
+
+
+    renderTimeline() {
+
+        const emptyEl =
+            document.getElementById("timeline-empty");
+
+        const counts = new Map();
+
+
+        // 1) 優先用每位測驗者的填寫時間統計
+        this.state.students.forEach((student) => {
+
+            const date = this.parseDateKey(student.time);
+
+            if (!date) return;
+
+            const key = date.getTime();
+
+            counts.set(key, (counts.get(key) || 0) + 1);
+
+        });
+
+
+        // 2) 沒有任何可解析的時間時，改用 API 的 dailyCounts
+        if (!counts.size && this.state.data) {
+
+            const daily = this.state.data.dailyCounts;
+
+            const entries = Array.isArray(daily)
+                ? daily.map((item) => [
+                    item.date || item.day || item.label,
+                    item.count ?? item.value
+                ])
+                : Object.entries(daily || {});
+
+            entries.forEach(([label, value]) => {
+
+                const date = this.parseDateKey(label);
+
+                if (!date) return;
+
+                const key = date.getTime();
+
+                counts.set(
+                    key,
+                    (counts.get(key) || 0) + (Number(value) || 0)
+                );
+
+            });
+
+        }
+
+
+        if (!counts.size) {
+
+            this.setText("timeline-summary", "--");
+
+            if (emptyEl) emptyEl.hidden = false;
+
+            return;
+        }
+
+        if (emptyEl) emptyEl.hidden = true;
+
+
+        // 補齊中間沒有人填寫的日期 (人數 0)，折線才不會跳日
+        const keys = [...counts.keys()].sort((a, b) => a - b);
+
+        const DAY = 24 * 60 * 60 * 1000;
+
+        const labels = [];
+        const values = [];
+
+        const pad = (n) => String(n).padStart(2, "0");
+
+        const crossYear =
+            new Date(keys[0]).getFullYear() !==
+            new Date(keys[keys.length - 1]).getFullYear();
+
+        for (
+            let t = keys[0];
+            t <= keys[keys.length - 1];
+            t += DAY
+        ) {
+
+            // 避免夏令時間造成的 1 小時誤差
+            const d = new Date(t);
+            const normalized = new Date(
+                d.getFullYear(), d.getMonth(), d.getDate()
+            ).getTime();
+
+            labels.push(
+                (crossYear ? d.getFullYear() + "/" : "") +
+                pad(d.getMonth() + 1) + "/" + pad(d.getDate())
+            );
+
+            values.push(counts.get(normalized) || 0);
+
+        }
+
+
+        const total = values.reduce((a, b) => a + b, 0);
+
+        const peakIndex = values.indexOf(Math.max(...values));
+
+        this.setText(
+            "timeline-summary",
+            `共 ${total} 人 · ${labels[0]} ~ ${labels[labels.length - 1]}` +
+            ` · 高峰 ${labels[peakIndex]} (${values[peakIndex]} 人)`
+        );
+
+
+        if (typeof renderTimelineChart === "function") {
+            renderTimelineChart(labels, values);
+        }
+
+    },
+
+
 
     renderStudents() {
 
