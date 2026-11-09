@@ -452,64 +452,40 @@ const Reports = {
         ];
 
         /*
-         * 長條 = 每人一格（人數 = 格數），格子顏色 = 該生班級顏色。
-         * 組內成員先依班級、再依座號排序，同班的格子會排在一起。
+         * 長條：同一小組、同一班級的人合併成一整塊（不分格），
+         * 塊的高度 = 該班級人數，顏色 = 班級顏色（透明度 0.28）。
+         * 各班級由下往上依班級順序堆疊。
          */
-        const membersByGroup = groups.map(group =>
-            filtered
-                .filter(s => (s.group || "未分組") === group)
-                .sort((a, b) =>
-                    classes.indexOf(a.class || "未填班級") -
-                    classes.indexOf(b.class || "未填班級") ||
-                    Number(a.seat) - Number(b.seat)
-                )
-        );
+        const classBarDatasets = classes.map(className => {
 
-        const slotCount = Math.max(
-            ...membersByGroup.map(members => members.length),
-            1
-        );
+            const rgb = hexToRgb(classColor[className]);
 
-        const cellDatasets = Array.from(
-            { length: slotCount },
-            (_, slot) => {
+            const members = groups.map(group =>
+                filtered
+                    .filter(s =>
+                        (s.group || "未分組") === group &&
+                        (s.class || "未填班級") === className
+                    )
+                    .sort((a, b) => Number(a.seat) - Number(b.seat))
+            );
 
-                const students = membersByGroup.map(
-                    members => members[slot] || null
-                );
+            return {
+                type: "bar",
+                label: className,
+                order: 2,
+                stack: "people",
+                isClassBar: true,
 
-                const rgbOf = student => hexToRgb(
-                    classColor[student.class || "未填班級"]
-                );
+                /* 該小組沒有這個班級的人 → null（不畫） */
+                data: members.map(list => list.length || null),
+                members,
 
-                return {
-                    type: "bar",
-                    label: `第 ${slot + 1} 格`,
-                    order: 2,
-                    stack: "people",
-                    isCell: true,
-
-                    /* 沒有成員的格子用 null，不會畫出細線 */
-                    data: students.map(student => student ? 1 : null),
-                    students,
-
-                    backgroundColor: students.map(student => {
-                        if (!student) return "transparent";
-                        const rgb = rgbOf(student);
-                        return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.28)`;
-                    }),
-
-                    borderColor: students.map(student => {
-                        if (!student) return "transparent";
-                        const rgb = rgbOf(student);
-                        return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-                    }),
-
-                    borderWidth: 1.5,
-                    borderSkipped: false
-                };
-            }
-        );
+                backgroundColor: `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.28)`,
+                borderColor: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`,
+                borderWidth: 1.5,
+                borderSkipped: false
+            };
+        });
 
         const classDatasets = classes.map((className, index) => {
 
@@ -549,7 +525,7 @@ const Reports = {
             data: {
                 labels: groups,
                 datasets: [
-                    ...cellDatasets,
+                    ...classBarDatasets,
                     ...classDatasets
                 ]
             },
@@ -579,16 +555,18 @@ const Reports = {
                         callbacks: {
                             label: item => {
 
-                                /* 每人一格：顯示班級、座號、姓名 */
-                                if (item.dataset.isCell) {
-                                    const student =
-                                        item.dataset.students[item.dataIndex];
+                                /* 班級長條塊：顯示班級、人數與名單 */
+                                if (item.dataset.isClassBar) {
+                                    const list =
+                                        item.dataset.members[item.dataIndex] || [];
 
-                                    return student
-                                        ? `${student.class || "未填班級"}　` +
-                                          `${student.seat || "-"} 號　` +
-                                          `${student.name || "未提供"}`
-                                        : "";
+                                    return [
+                                        `${item.dataset.label}：${list.length} 人`,
+                                        ...list.map(student =>
+                                            `　${student.seat || "-"} 號 ` +
+                                            `${student.name || "未提供"}`
+                                        )
+                                    ];
                                 }
 
                                 return `${item.dataset.label}：` +
