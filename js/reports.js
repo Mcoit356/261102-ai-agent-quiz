@@ -166,6 +166,7 @@ const Reports = {
         this.renderGroupChart(filtered);
         this.renderOptional(filtered);
         this.renderQuestions(filtered);
+        this.renderAiChart(filtered);
         this.renderSummary(filtered);
     },
 
@@ -661,6 +662,104 @@ const Reports = {
                   `　未填寫 ${ai.blank} 人`
                 : `尚無人填寫（未填寫 ${ai.blank} 人）`
         );
+    },
+
+
+    /* ---------------------------------------------
+       最喜愛的 AI 折線圖（x：AI 名稱，y：人數，直線連接）
+    --------------------------------------------- */
+
+    async renderAiChart(filtered) {
+
+        const canvasId = "reportAiChart";
+        const canvas = document.getElementById(canvasId);
+
+        if (!canvas || typeof window.loadChartJS !== "function") return;
+
+        const tally = this.tally(
+            filtered,
+            "aiSpecial",
+            (a, b) =>
+                b.count - a.count ||
+                a.label.localeCompare(b.label, "zh-Hant")
+        );
+
+        this.toggleEmpty(canvasId, !tally.rows.length);
+
+        const Chart = await window.loadChartJS();
+
+        this.destroyChart(canvasId);
+
+        if (!tally.rows.length) return;
+
+        const colors = this.themeColors();
+        const size = this.fontSize();
+
+        this.charts[canvasId] = new Chart(canvas.getContext("2d"), {
+            type: "line",
+
+            data: {
+                labels: tally.rows.map(row => row.label),
+                datasets: [{
+                    label: "人數",
+                    data: tally.rows.map(row => row.count),
+                    borderColor: "#4f46e5",
+                    backgroundColor: "rgba(79, 70, 229, 0.10)",
+                    borderWidth: 2.5,
+                    tension: 0,           /* 直線連接 */
+                    fill: true,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: "#4f46e5"
+                }]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: item => `人數：${item.parsed.y} 人`
+                        }
+                    }
+                },
+
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: colors.text,
+                            font: { size }
+                        },
+                        title: {
+                            display: true,
+                            text: "AI",
+                            color: colors.muted,
+                            font: { size }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: colors.grid },
+                        ticks: {
+                            color: colors.text,
+                            precision: 0,
+                            stepSize: 1,
+                            font: { size }
+                        },
+                        title: {
+                            display: true,
+                            text: "人數",
+                            color: colors.muted,
+                            font: { size }
+                        }
+                    }
+                }
+            }
+        });
     },
 
 
