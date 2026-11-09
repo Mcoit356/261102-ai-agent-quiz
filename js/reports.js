@@ -451,35 +451,64 @@ const Reports = {
             parseInt(hex.slice(5, 7), 16)
         ];
 
-        /* 各小組的長條顏色 = 組內各班級顏色依人數加權混合 */
-        const mixed = groups.map(group => {
-
-            const members = filtered.filter(
-                s => (s.group || "未分組") === group
-            );
-
-            const sum = [0, 0, 0];
-
-            members.forEach(student => {
-                const rgb = hexToRgb(
-                    classColor[student.class || "未填班級"]
-                );
-                sum[0] += rgb[0];
-                sum[1] += rgb[1];
-                sum[2] += rgb[2];
-            });
-
-            const n = members.length || 1;
-
-            return sum.map(value => Math.round(value / n));
-        });
-
-        const barFill = mixed.map(
-            rgb => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.28)`
+        /*
+         * 長條 = 每人一格（人數 = 格數），格子顏色 = 該生班級顏色。
+         * 組內成員先依班級、再依座號排序，同班的格子會排在一起。
+         */
+        const membersByGroup = groups.map(group =>
+            filtered
+                .filter(s => (s.group || "未分組") === group)
+                .sort((a, b) =>
+                    classes.indexOf(a.class || "未填班級") -
+                    classes.indexOf(b.class || "未填班級") ||
+                    Number(a.seat) - Number(b.seat)
+                )
         );
 
-        const barBorder = mixed.map(
-            rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
+        const slotCount = Math.max(
+            ...membersByGroup.map(members => members.length),
+            1
+        );
+
+        const cellDatasets = Array.from(
+            { length: slotCount },
+            (_, slot) => {
+
+                const students = membersByGroup.map(
+                    members => members[slot] || null
+                );
+
+                const rgbOf = student => hexToRgb(
+                    classColor[student.class || "未填班級"]
+                );
+
+                return {
+                    type: "bar",
+                    label: `第 ${slot + 1} 格`,
+                    order: 2,
+                    stack: "people",
+                    isCell: true,
+
+                    /* 沒有成員的格子用 null，不會畫出細線 */
+                    data: students.map(student => student ? 1 : null),
+                    students,
+
+                    backgroundColor: students.map(student => {
+                        if (!student) return "transparent";
+                        const rgb = rgbOf(student);
+                        return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.28)`;
+                    }),
+
+                    borderColor: students.map(student => {
+                        if (!student) return "transparent";
+                        const rgb = rgbOf(student);
+                        return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+                    }),
+
+                    borderWidth: 1.5,
+                    borderSkipped: false
+                };
+            }
         );
 
         const classDatasets = classes.map((className, index) => {
@@ -490,6 +519,8 @@ const Reports = {
                 type: "line",
                 label: className,
                 order: 1,
+                stack: `line-${className}`,
+                isLine: true,
 
                 data: groups.map(group =>
                     filtered.filter(s =>
@@ -518,16 +549,7 @@ const Reports = {
             data: {
                 labels: groups,
                 datasets: [
-                    {
-                        type: "bar",
-                        label: "小組總人數",
-                        order: 2,
-                        data: groupTotals,
-                        backgroundColor: barFill,
-                        borderColor: barBorder,
-                        borderWidth: 1,
-                        borderRadius: 6
-                    },
+                    ...cellDatasets,
                     ...classDatasets
                 ]
             },
@@ -536,7 +558,7 @@ const Reports = {
                 responsive: true,
                 maintainAspectRatio: false,
 
-                interaction: { mode: "index", intersect: false },
+                interaction: { mode: "nearest", intersect: true },
 
                 plugins: {
                     legend: {
@@ -546,20 +568,39 @@ const Reports = {
                             boxWidth: 12,
                             usePointStyle: true,
                             font: { size: this.fontSize() },
-                            filter: item => item.datasetIndex !== 0
+                            /* 圖例只列班級（顏色 = 格子顏色），不列每一格 */
+                            filter: (item, chartData) =>
+                                Boolean(
+                                    chartData.datasets[item.datasetIndex].isLine
+                                )
                         }
                     },
                     tooltip: {
-                        filter: item => item.parsed.y > 0,
                         callbacks: {
-                            label: item =>
-                                `${item.dataset.label}：${item.parsed.y} 人`
+                            label: item => {
+
+                                /* 每人一格：顯示班級、座號、姓名 */
+                                if (item.dataset.isCell) {
+                                    const student =
+                                        item.dataset.students[item.dataIndex];
+
+                                    return student
+                                        ? `${student.class || "未填班級"}　` +
+                                          `${student.seat || "-"} 號　` +
+                                          `${student.name || "未提供"}`
+                                        : "";
+                                }
+
+                                return `${item.dataset.label}：` +
+                                       `${item.parsed.y} 人`;
+                            }
                         }
                     }
                 },
 
                 scales: {
                     x: {
+                        stacked: true,
                         grid: { display: false },
                         ticks: {
                             color: colors.text,
@@ -573,6 +614,7 @@ const Reports = {
                         }
                     },
                     y: {
+                        stacked: true,
                         beginAtZero: true,
                         grid: { color: colors.grid },
                         ticks: {
