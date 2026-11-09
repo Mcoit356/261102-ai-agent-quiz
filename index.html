@@ -513,10 +513,10 @@
                         <thead>
 
                             <tr>
+                                <th>組別</th>
+                                <th>班級</th>
                                 <th>座號</th>
                                 <th>姓名</th>
-                                <th>班級</th>
-                                <th>組別</th>
                                 <th>分數</th>
                                 <th>AI 選擇</th>
                                 <th>滿意度</th>
@@ -612,32 +612,121 @@
                     <h1>報告</h1>
 
                     <p>
-                        報告功能預留區
+                        依小組、班級篩選，查看人數、成績與題目分析
                     </p>
                 </div>
 
             </div>
 
 
-            <article class="dashboard-card report-placeholder-card">
+            <!-- 篩選 -->
+            <div class="report-filter-bar">
 
-                <div class="report-placeholder">
+                <label class="report-filter-field">
+                    <span>小組</span>
+                    <select
+                        class="filter-select"
+                        id="report-group-filter"
+                    >
+                        <option value="all">所有小組</option>
+                    </select>
+                </label>
 
-                    <div class="report-icon">
-                        ▤
+                <label class="report-filter-field">
+                    <span>班級</span>
+                    <select
+                        class="filter-select"
+                        id="report-class-filter"
+                    >
+                        <option value="all">所有班級</option>
+                    </select>
+                </label>
+
+                <button
+                    type="button"
+                    class="report-filter-reset"
+                    id="report-filter-reset"
+                >
+                    重設篩選
+                </button>
+
+            </div>
+
+
+            <!-- KPI -->
+            <div class="kpi-grid report-kpi-grid">
+
+                <article class="kpi-card">
+                    <div class="kpi-top">
+                        <span class="kpi-label">人數</span>
                     </div>
+                    <div class="kpi-value" id="report-kpi-count">--</div>
+                    <div class="kpi-note">篩選人數 / 總人數</div>
+                </article>
 
-                    <h2>
-                        尚未規劃
-                    </h2>
+                <article class="kpi-card">
+                    <div class="kpi-top">
+                        <span class="kpi-label">平均分</span>
+                    </div>
+                    <div class="kpi-value" id="report-kpi-average">--</div>
+                    <div class="kpi-note" id="report-kpi-average-note">
+                        平均分數
+                    </div>
+                </article>
 
-                    <p>
-                        報告功能將於後續版本加入。
-                    </p>
+            </div>
 
+
+            <!-- 分數折線圖 -->
+            <article class="dashboard-card report-chart-card">
+
+                <div class="card-header">
+                    <div>
+                        <h3>人數分數折線圖</h3>
+                        <span>X：分數（每 2 分一格）　Y：人數</span>
+                    </div>
+                </div>
+
+                <div class="report-chart-wrapper">
+                    <canvas id="reportScoreChart"></canvas>
+                    <div class="report-chart-empty" hidden>
+                        沒有符合條件的測驗者
+                    </div>
                 </div>
 
             </article>
+
+
+            <!-- 組成人數長條圖 -->
+            <article class="dashboard-card report-chart-card">
+
+                <div class="card-header">
+                    <div>
+                        <h3>組成人數長條圖</h3>
+                        <span>長條：各小組人數　線 / 點：各班級人數</span>
+                    </div>
+                </div>
+
+                <div class="report-chart-wrapper report-chart-tall">
+                    <canvas id="reportGroupChart"></canvas>
+                    <div class="report-chart-empty" hidden>
+                        沒有符合條件的測驗者
+                    </div>
+                </div>
+
+            </article>
+
+
+            <!-- 題目分析 -->
+            <div class="report-section-title">
+                <h2>題目分析</h2>
+                <span>依上方篩選結果統計</span>
+            </div>
+
+            <div
+                class="analysis-list"
+                id="report-question-analysis"
+            ></div>
 
         </section>
 
@@ -687,6 +776,9 @@
 
 <!-- Dashboard -->
 <script src="js/dashboard.js"></script>
+
+<!-- Reports -->
+<script src="js/reports.js"></script>
 
 </body>
 </html>
