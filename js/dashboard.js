@@ -1414,7 +1414,7 @@ renderAnalysis() {
                 <tr>
 
                     <td
-                        colspan="7"
+                        colspan="8"
                         class="empty-table"
                     >
                         找不到符合條件的測驗者
@@ -1441,13 +1441,7 @@ renderAnalysis() {
 
                 <td>
                     ${this.escapeHTML(
-                        student.seat || "-"
-                    )}
-                </td>
-
-                <td>
-                    ${this.escapeHTML(
-                        student.name || "未提供"
+                        student.group || "-"
                     )}
                 </td>
 
@@ -1459,7 +1453,13 @@ renderAnalysis() {
 
                 <td>
                     ${this.escapeHTML(
-                        student.group || "-"
+                        student.seat || "-"
+                    )}
+                </td>
+
+                <td>
+                    ${this.escapeHTML(
+                        student.name || "未提供"
                     )}
                 </td>
 
@@ -1486,19 +1486,31 @@ renderAnalysis() {
                     )}
                 </td>
 
+                <td>
+                    <button
+                        type="button"
+                        class="view-student-btn"
+                    >
+                        查看
+                    </button>
+                </td>
+
             `;
 
 
-            tr.addEventListener(
-                "click",
-                () => {
+            tr.querySelector(".view-student-btn")
+                .addEventListener(
+                    "click",
+                    event => {
 
-                    this.showStudentDetail(
-                        student
-                    );
+                        event.stopPropagation();
 
-                }
-            );
+                        this.showStudentDetail(
+                            student
+                        );
+
+                    }
+                );
 
 
             tbody.appendChild(tr);
@@ -1748,234 +1760,396 @@ renderAnalysis() {
 
     bindStudentDetail() {
 
-        const closeButtons =
-            document.querySelectorAll(
-                "[data-close-student]"
-            );
-
-
-        closeButtons.forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    this.closeStudentDetail();
-
-                }
-            );
-
-        });
-
-
         const modal =
-            document.getElementById(
-                "student-modal"
-            );
+            document.getElementById("student-modal");
 
+        const closeButton =
+            document.getElementById("modal-close");
+
+        if (closeButton) {
+            closeButton.addEventListener(
+                "click",
+                () => this.closeStudentDetail()
+            );
+        }
 
         if (modal) {
-
             modal.addEventListener(
                 "click",
                 event => {
-
-                    if (
-                        event.target === modal
-                    ) {
-
+                    if (event.target === modal) {
                         this.closeStudentDetail();
-
                     }
-
                 }
             );
-
         }
+
+        document.addEventListener(
+            "keydown",
+            event => {
+                if (event.key === "Escape") {
+                    this.closeStudentDetail();
+                }
+            }
+        );
+    },
+
+
+    /* PR 值：低於此分數的人 + 同分者的一半，佔全體的百分比 */
+    calculatePR(score) {
+
+        const scores =
+            this.state.students
+                .map(item => Number(item.score))
+                .filter(value => !Number.isNaN(value));
+
+        if (!scores.length || Number.isNaN(Number(score))) {
+            return null;
+        }
+
+        const target = Number(score);
+
+        const below =
+            scores.filter(value => value < target).length;
+
+        const equal =
+            scores.filter(value => value === target).length;
+
+        return Math.round(
+            ((below + equal * 0.5) / scores.length) * 100
+        );
     },
 
 
     showStudentDetail(student) {
 
-        this.state.selectedStudent =
-            student;
+        this.state.selectedStudent = student;
 
-
-        const profile =
-            document.getElementById(
-                "student-profile"
-            );
-
-
-        const answers =
-            document.getElementById(
-                "student-answers"
-            );
-
-
-        if (profile) {
-
-            profile.innerHTML = `
-
-                <div class="student-profile-header">
-
-                    <div class="student-profile-name">
-
-                        ${this.escapeHTML(
-                            student.name || "未提供"
-                        )}
-
-                    </div>
-
-                    <div class="student-profile-score">
-
-                        ${this.formatScore(
-                            student.score
-                        )}
-                        <span>/36</span>
-
-                    </div>
-
-                </div>
-
-
-                <div class="student-profile-grid">
-
-                    <div>
-
-                        <span>班級</span>
-
-                        <strong>
-                            ${this.escapeHTML(
-                                student.class || "-"
-                            )}
-                        </strong>
-
-                    </div>
-
-
-                    <div>
-
-                        <span>座號</span>
-
-                        <strong>
-                            ${this.escapeHTML(
-                                student.seat || "-"
-                            )}
-                        </strong>
-
-                    </div>
-
-
-                    <div>
-
-                        <span>組別</span>
-
-                        <strong>
-                            ${this.escapeHTML(
-                                student.group || "-"
-                            )}
-                        </strong>
-
-                    </div>
-
-
-                    <div>
-
-                        <span>AI 特別題</span>
-
-                        <strong>
-                            ${this.escapeHTML(
-                                student.aiSpecial || "-"
-                            )}
-                        </strong>
-
-                    </div>
-
-
-                    <div>
-
-                        <span>滿意度</span>
-
-                        <strong>
-                            ${this.escapeHTML(
-                                student.satisfaction || "-"
-                            )}
-                        </strong>
-
-                    </div>
-
-
-                    <div>
-
-                        <span>填寫時間</span>
-
-                        <strong>
-                            ${this.escapeHTML(
-                                student.time || "-"
-                            )}
-                        </strong>
-
-                    </div>
-
-                </div>
-
-            `;
-        }
-
-
-        if (answers) {
-
-            answers.innerHTML =
-                this.buildStudentAnswerHTML(
-                    student
-                );
-
-        }
-
-
-        /*
-         * 若 HTML 有獨立 detail 區塊，
-         * 同時顯示。
-         */
-
-        const detail =
-            document.getElementById(
-                "student-detail"
-            );
-
-
-        if (detail) {
-
-            detail.classList.add("active");
-
-        }
-
-
-        /*
-         * 如果有 modal，開啟 modal
-         */
+        const content =
+            document.getElementById("student-modal-content");
 
         const modal =
-            document.getElementById(
-                "student-modal"
+            document.getElementById("student-modal");
+
+        if (!content || !modal) return;
+
+        const pr = this.calculatePR(student.score);
+
+        content.innerHTML = `
+
+            <div class="student-modal-body">
+
+                <article class="student-summary-card">
+
+                    <div class="student-summary-top">
+
+                        <div>
+                            <div class="student-summary-name">
+                                ${this.escapeHTML(student.name || "未提供")}
+                            </div>
+                            <div class="student-summary-sub">
+                                組別：${this.escapeHTML(student.group || "未分組")}
+                                ・
+                                ${this.escapeHTML(student.class || "-")}
+                                ・
+                                ${this.escapeHTML(student.seat || "-")} 號
+                            </div>
+
+                            <button
+                                type="button"
+                                class="student-pdf-btn"
+                                id="student-pdf-btn"
+                            >
+                                下載 PDF
+                            </button>
+                        </div>
+
+                        <div class="student-summary-score">
+                            ${this.formatScore(student.score)}
+                            <span>/36</span>
+                        </div>
+
+                    </div>
+
+                    <div class="student-summary-grid">
+
+                        <div>
+                            <span>填寫日期時間</span>
+                            <strong>
+                                ${this.escapeHTML(student.time || "-")}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>PR 值</span>
+                            <strong>
+                                ${pr === null ? "-" : "PR " + pr}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>AI 選擇</span>
+                            <strong>
+                                ${this.escapeHTML(student.aiSpecial || "-")}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>測驗滿意度</span>
+                            <strong>
+                                ${this.escapeHTML(student.satisfaction || "-")}
+                            </strong>
+                        </div>
+
+                    </div>
+
+                </article>
+
+                <article class="student-chart-card">
+
+                    <h3>分數分布</h3>
+
+                    <div class="student-chart-wrapper">
+                        <canvas id="studentScoreChart"></canvas>
+                    </div>
+
+                    <p class="student-chart-note">
+                        <span class="student-chart-dot"></span>
+                        橘色點為本人分數區間
+                        （${this.formatScore(student.score)} 分）
+                    </p>
+
+                </article>
+
+                <div class="student-question-list">
+                    ${this.buildStudentAnswerHTML(student)}
+                </div>
+
+            </div>
+
+        `;
+
+        content.scrollTop = 0;
+        modal.scrollTop = 0;
+
+        modal.classList.add("visible");
+        document.body.classList.add("modal-open");
+
+        this.renderStudentScoreChart(student);
+
+        const pdfButton =
+            document.getElementById("student-pdf-btn");
+
+        if (pdfButton) {
+            pdfButton.addEventListener(
+                "click",
+                () => this.downloadStudentPDF(student)
             );
-
-
-        if (modal) {
-
-            modal.classList.add("active");
-
-            document.body.classList.add(
-                "modal-open"
-            );
-
         }
     },
 
 
     /* =====================================================
-       BUILD STUDENT ANSWERS
+       分數分布折線圖（x：分數每 2 分一格，y：人數）
+    ===================================================== */
+
+    async renderStudentScoreChart(student) {
+
+        const canvas =
+            document.getElementById("studentScoreChart");
+
+        if (!canvas || typeof window.loadChartJS !== "function") {
+            return;
+        }
+
+        try {
+
+            const Chart = await window.loadChartJS();
+
+            /* 載入期間視窗已被關閉或換人 → 不畫 */
+            if (this.state.selectedStudent !== student) {
+                return;
+            }
+
+            if (this.state.studentChart) {
+                this.state.studentChart.destroy();
+                this.state.studentChart = null;
+            }
+
+            const MAX_SCORE = 36;
+            const STEP = 2;
+            const binCount = Math.floor(MAX_SCORE / STEP) + 1;
+
+            const labels = [];
+            const counts = new Array(binCount).fill(0);
+
+            for (let i = 0; i < binCount; i++) {
+                labels.push(String(i * STEP));
+            }
+
+            this.state.students.forEach(item => {
+                const score = Number(item.score);
+                if (Number.isNaN(score)) return;
+
+                const bin = Math.min(
+                    Math.max(Math.floor(score / STEP), 0),
+                    binCount - 1
+                );
+
+                counts[bin] += 1;
+            });
+
+            const studentBin = Math.min(
+                Math.max(
+                    Math.floor(Number(student.score) / STEP),
+                    0
+                ),
+                binCount - 1
+            );
+
+            const css = getComputedStyle(document.documentElement);
+            const textColor =
+                css.getPropertyValue("--text-main").trim() || "#374151";
+            const mutedColor =
+                css.getPropertyValue("--text-muted").trim() || "#6B7280";
+            const gridColor =
+                css.getPropertyValue("--border").trim() || "#e5e7eb";
+
+            const rangeText = index => {
+                const start = index * STEP;
+                return index === binCount - 1
+                    ? `${start} 分`
+                    : `${start}–${start + STEP - 1} 分`;
+            };
+
+            this.state.studentChart = new Chart(
+                canvas.getContext("2d"),
+                {
+                    type: "line",
+
+                    data: {
+                        labels,
+
+                        datasets: [{
+                            label: "人數",
+                            data: counts,
+
+                            borderColor: "#4f46e5",
+                            backgroundColor: "rgba(79, 70, 229, 0.10)",
+                            borderWidth: 2.5,
+
+                            /* 直線連接，不使用曲線 */
+                            tension: 0,
+                            fill: true,
+
+                            pointRadius: counts.map(
+                                (_, i) => i === studentBin ? 8 : 3.5
+                            ),
+                            pointHoverRadius: counts.map(
+                                (_, i) => i === studentBin ? 9 : 5
+                            ),
+                            pointBackgroundColor: counts.map(
+                                (_, i) => i === studentBin
+                                    ? "#f97316"
+                                    : "#4f46e5"
+                            ),
+                            pointBorderColor: counts.map(
+                                (_, i) => i === studentBin
+                                    ? "#ffffff"
+                                    : "#4f46e5"
+                            ),
+                            pointBorderWidth: 2
+                        }]
+                    },
+
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+
+                        plugins: {
+                            legend: { display: false },
+
+                            tooltip: {
+                                callbacks: {
+                                    title: items =>
+                                        rangeText(items[0].dataIndex),
+                                    label: item =>
+                                        `人數：${item.parsed.y} 人`
+                                }
+                            }
+                        },
+
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: textColor, maxRotation: 0 },
+                                title: {
+                                    display: true,
+                                    text: "分數（每 2 分一格）",
+                                    color: mutedColor
+                                }
+                            },
+
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: gridColor },
+                                ticks: {
+                                    color: textColor,
+                                    precision: 0,
+                                    stepSize: 1
+                                },
+                                title: {
+                                    display: true,
+                                    text: "人數",
+                                    color: mutedColor
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+
+        } catch (error) {
+            console.error("學生分數圖表建立失敗：", error);
+
+            const wrapper = canvas.parentElement;
+            if (wrapper) {
+                wrapper.innerHTML =
+                    '<div class="empty-state">圖表載入失敗</div>';
+            }
+        }
+    },
+
+
+    /* =====================================================
+       下載 PDF（開啟列印視窗，目的地選「另存為 PDF」）
+    ===================================================== */
+
+    downloadStudentPDF(student) {
+
+        const originalTitle = document.title;
+
+        document.title =
+            `${student.class || ""}_${student.seat || ""}_` +
+            `${student.name || "測驗者"}_測驗結果`;
+
+        document.body.classList.add("printing-student");
+
+        const restore = () => {
+            document.body.classList.remove("printing-student");
+            document.title = originalTitle;
+            window.removeEventListener("afterprint", restore);
+        };
+
+        window.addEventListener("afterprint", restore);
+
+        /* 等圖表依列印寬度重畫完再開列印視窗 */
+        setTimeout(() => window.print(), 250);
+    },
+
+
+    /* =====================================================
+       BUILD STUDENT ANSWERS（Q1 ~ Q15 卡片）
     ===================================================== */
 
     buildStudentAnswerHTML(student) {
@@ -1985,108 +2159,146 @@ renderAnalysis() {
                 ? student.answers
                 : [];
 
+        const questions = this.state.questions;
 
-        const questions =
-            this.state.questions;
-
-
-        if (!answers.length) {
-
+        if (!questions.length) {
             return `
-                <div class="empty-state">
-                    尚無作答資料
-                </div>
+                <div class="empty-state">尚無題目資料</div>
             `;
-
         }
 
+        return questions.map((question, index) => {
 
-        let html = `
+            const choices =
+                QUESTION_CHOICES[index] || [];
 
-            <div class="student-answer-grid">
+            const userAnswer =
+                String(answers[index] || "")
+                    .trim()
+                    .toUpperCase();
 
-        `;
+            const correctAnswer =
+                String(question.answer || "")
+                    .trim()
+                    .toUpperCase();
 
+            const isCorrect =
+                userAnswer !== "" &&
+                userAnswer === correctAnswer;
 
-        questions.forEach(
-            (question, index) => {
+            /* 全體答對率（與分析頁相同） */
+            const counts =
+                this.calculateQuestionCounts(index);
 
-                const userAnswer =
-                    String(
-                        answers[index] || "-"
+            const totalAnswered =
+                Object.values(counts).reduce(
+                    (sum, value) => sum + value,
+                    0
+                );
+
+            const correctCount =
+                counts[correctAnswer] || 0;
+
+            const percent =
+                totalAnswered
+                    ? Math.round(
+                        (correctCount / totalAnswered) * 100
                     )
-                        .trim()
-                        .toUpperCase();
+                    : 0;
 
+            const rateText =
+                `答對率: ${correctCount}/${totalAnswered} 人 ` +
+                `(${percent}%)`;
 
-                const correctAnswer =
-                    String(
-                        question.answer || ""
-                    )
-                        .trim()
-                        .toUpperCase();
+            const optionsHTML = choices.map(
+                (choice, choiceIndex) => {
 
+                    const letter =
+                        String.fromCharCode(65 + choiceIndex);
 
-                const isCorrect =
-                    userAnswer === correctAnswer;
+                    let stateClass = "";
+                    let tag = "";
 
+                    if (letter === correctAnswer) {
+                        stateClass = "correct-option";
+                        tag = userAnswer === letter
+                            ? "✓ 作答正確"
+                            : "正確答案";
+                    } else if (letter === userAnswer) {
+                        stateClass = "wrong-option";
+                        tag = "✗ 作答錯誤";
+                    }
 
-                html += `
+                    return `
 
-                    <div class="
-                        student-answer-item
-                        ${isCorrect
-                            ? "correct"
-                            : "wrong"}
-                    ">
+                        <div class="option-description ${stateClass}">
 
-                        <div class="
-                            student-answer-question
-                        ">
+                            <span class="option-letter">
+                                ${letter}
+                            </span>
 
-                            Q${index + 1}
+                            <div class="option-body">
+
+                                <span class="option-text">
+                                    ${this.escapeHTML(choice)}
+                                </span>
+
+                                ${tag
+                                    ? `<div class="option-stat">${tag}</div>`
+                                    : ""}
+
+                            </div>
 
                         </div>
 
+                    `;
+                }
+            ).join("");
 
-                        <div class="
-                            student-answer-value
-                        ">
+            return `
 
-                            ${this.escapeHTML(
-                                userAnswer
-                            )}
+                <article class="question-analysis-card">
+
+                    <div class="question-analysis-header">
+
+                        <div class="question-heading">
+
+                            <div class="question-number">
+                                Q${index + 1}
+                            </div>
+
+                            <h3>
+                                ${this.escapeHTML(question.title || "")}
+                            </h3>
 
                         </div>
 
+                        <div class="question-answer student-answer-info ${
+                            isCorrect ? "is-correct" : "is-wrong"
+                        }">
 
-                        <div class="
-                            student-answer-status
-                        ">
+                            回答答案：
+                            <strong>
+                                ${this.escapeHTML(userAnswer || "未作答")}
+                            </strong>
 
-                            ${
-                                isCorrect
-                                    ? "正確"
-                                    : "錯誤"
-                            }
+                            <small class="question-rate">
+                                ${rateText}
+                            </small>
 
                         </div>
 
                     </div>
 
-                `;
-            }
-        );
+                    <div class="student-question-options">
+                        ${optionsHTML}
+                    </div>
 
+                </article>
 
-        html += `
+            `;
 
-            </div>
-
-        `;
-
-
-        return html;
+        }).join("");
     },
 
 
@@ -2097,42 +2309,20 @@ renderAnalysis() {
     closeStudentDetail() {
 
         const modal =
-            document.getElementById(
-                "student-modal"
-            );
-
+            document.getElementById("student-modal");
 
         if (modal) {
-
-            modal.classList.remove(
-                "active"
-            );
-
+            modal.classList.remove("visible");
         }
 
-
-        const detail =
-            document.getElementById(
-                "student-detail"
-            );
-
-
-        if (detail) {
-
-            detail.classList.remove(
-                "active"
-            );
-
+        if (this.state.studentChart) {
+            this.state.studentChart.destroy();
+            this.state.studentChart = null;
         }
 
+        document.body.classList.remove("modal-open");
 
-        document.body.classList.remove(
-            "modal-open"
-        );
-
-
-        this.state.selectedStudent =
-            null;
+        this.state.selectedStudent = null;
     },
 
 
