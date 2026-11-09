@@ -31,7 +31,6 @@
 ├── data_test.json
 │
 ├── css/
-│   ├── style.css
 │   ├── dashboard.css
 │   └── responsive.css
 │
@@ -41,8 +40,7 @@
 │   ├── charts.js
 │   ├── dashboard.js
 │   ├── reports.js
-│   ├── theme.js
-│   └── main.js
+│   └── theme.js
 │
 ├── LICENSE
 │
@@ -66,7 +64,6 @@
 
 | 檔案 | 功能 |
 |------|------|
-| `style.css` | 預留的全站基礎樣式檔，目前為空白。 |
 | `dashboard.css` | 儀表板主要樣式：側邊欄、KPI 卡片、圖表區塊、表格、彈出視窗、深淺色主題與列印樣式。 |
 | `responsive.css` | 響應式規則，依螢幕寬度（1200 / 900 / 700 / 420 px）調整排版。 |
 
@@ -80,7 +77,6 @@
 | `dashboard.js` | 儀表板核心：頁面切換、KPI 卡片、班級統計、題目分析、測驗者列表與個人詳情。內含 15 題的題目選項文字。 |
 | `reports.js` | 報告頁：小組／班級篩選、分數折線圖、人數長條圖、滿意度與最喜愛 AI 統計，以及匯出 PDF（瀏覽器列印）。 |
 | `theme.js` | 深色／淺色模式切換，並用 localStorage 記住選擇。 |
-| `main.js` | 預留的進入點檔案，目前為空白。 |
 
 ---
 
