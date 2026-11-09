@@ -714,9 +714,11 @@ body {
 .search-box {
     flex: 1;
 
-    max-width: 500px;
+    min-width: 0;
 
-    height: 44px;
+    box-sizing: border-box;
+
+    height: 52px;
 
     display: flex;
     align-items: center;
@@ -748,7 +750,9 @@ body {
 }
 
 .filter-select {
-    height: 44px;
+    box-sizing: border-box;
+
+    height: 52px;
 
     padding: 0 14px;
 
@@ -1462,6 +1466,43 @@ html[data-theme="dark"] .mobile-header {
 
         border-top: 1px solid var(--border);
 
+    }
+
+}
+
+
+/* =========================================================
+   STUDENT TIMELINE
+========================================================= */
+
+.timeline-card {
+    margin-bottom: 18px;
+}
+
+.timeline-wrapper {
+    min-height: 0;
+
+    height: 300px;
+
+    /* 左側留位置給直立的「人數」標題 */
+    padding: 20px 24px 24px 36px;
+}
+
+.timeline-wrapper canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.timeline-wrapper .chart-empty[hidden] {
+    display: none;
+}
+
+@media (max-width: 700px) {
+
+    .timeline-wrapper {
+        height: 260px;
+
+        padding: 14px 12px 16px 30px;
     }
 
 }
