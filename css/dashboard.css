@@ -2068,3 +2068,137 @@ body.modal-open {
         print-color-adjust: exact;
     }
 }
+
+
+/* =========================================================
+   REPORT：選填欄位長條 / 電腦版字體放大
+========================================================= */
+
+.report-optional-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+
+    margin-bottom: 24px;
+}
+
+.report-optional-grid .report-chart-card {
+    margin-bottom: 0;
+}
+
+.report-bar-list {
+    padding: 18px 22px 22px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.report-bar-row {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr) 96px;
+    align-items: center;
+    gap: 12px;
+
+    font-size: 14px;
+}
+
+.report-bar-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.report-bar-track {
+    height: 14px;
+
+    border-radius: 999px;
+    background: var(--bg-soft);
+
+    overflow: hidden;
+}
+
+.report-bar-fill {
+    height: 100%;
+
+    border-radius: 999px;
+    background: var(--primary);
+}
+
+.report-bar-row.is-empty .report-bar-label,
+.report-bar-row.is-empty .report-bar-value {
+    color: var(--text-muted);
+}
+
+.report-bar-row.is-empty .report-bar-fill {
+    background: var(--text-muted);
+    opacity: 0.5;
+}
+
+.report-bar-value {
+    text-align: right;
+    white-space: nowrap;
+    color: var(--text-secondary);
+}
+
+@media (min-width: 900px) {
+
+    .report-chart-card .card-header h3 {
+        font-size: 18px;
+    }
+
+    .report-chart-card .card-header span {
+        font-size: 14px;
+    }
+
+    .report-section-title h2 {
+        font-size: 24px;
+    }
+
+    .report-section-title span {
+        font-size: 14px;
+    }
+
+    .report-filter-field span {
+        font-size: 14px;
+    }
+
+    .detail-chip {
+        font-size: 14px;
+    }
+
+    .report-summary-list {
+        font-size: 16px;
+    }
+
+    .report-summary-note {
+        font-size: 14px;
+    }
+
+    .report-bar-row {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 900px) {
+
+    .report-optional-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+
+    .report-bar-row {
+        grid-template-columns: 78px minmax(0, 1fr) 84px;
+        gap: 8px;
+        font-size: 12px;
+    }
+}
+
+@media print {
+
+    body.printing-report .report-optional-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
