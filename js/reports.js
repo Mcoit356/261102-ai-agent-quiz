@@ -119,6 +119,12 @@ const Reports = {
             });
         }
 
+        const pdfButton = document.getElementById("report-pdf-btn");
+
+        if (pdfButton) {
+            pdfButton.addEventListener("click", () => this.downloadPDF());
+        }
+
         if (resetButton) {
             resetButton.addEventListener("click", () => {
                 this.state.group = "all";
@@ -159,6 +165,7 @@ const Reports = {
         this.renderScoreChart(filtered);
         this.renderGroupChart(filtered);
         this.renderQuestions(filtered);
+        this.renderSummary(filtered);
     },
 
     average(students) {
@@ -486,6 +493,97 @@ const Reports = {
 
 
     /* ---------------------------------------------
+       題目統計（難度、鑑別度、迷思選項）
+    --------------------------------------------- */
+
+    difficultyLabel(rate) {
+
+        if (rate >= 80) return { text: "容易", cls: "easy" };
+        if (rate >= 50) return { text: "中等", cls: "medium" };
+        if (rate >= 30) return { text: "偏難", cls: "hard" };
+        return { text: "困難", cls: "hard" };
+    },
+
+    discriminationLabel(d) {
+
+        if (d >= 0.4) return "優良";
+        if (d >= 0.3) return "良好";
+        if (d >= 0.2) return "尚可";
+        if (d >= 0) return "待改進";
+        return "需檢討";
+    },
+
+    questionStats(index, filtered) {
+
+        const question = this.state.questions[index];
+
+        const correct = String(question.answer || "")
+            .trim().toUpperCase();
+
+        const counts = Dashboard.calculateQuestionCounts(index, filtered);
+
+        const total = Object.values(counts)
+            .reduce((sum, value) => sum + value, 0);
+
+        const correctCount = counts[correct] || 0;
+
+        const rate = total ? (correctCount / total) * 100 : 0;
+
+        /* 最常見的錯誤選項 */
+        let wrongLetter = null;
+        let wrongCount = 0;
+
+        Object.keys(counts).forEach(letter => {
+            if (letter !== correct && counts[letter] > wrongCount) {
+                wrongLetter = letter;
+                wrongCount = counts[letter];
+            }
+        });
+
+        /* 高分組 / 低分組（各取前後 27%，至少 6 人才計算） */
+        let high = null, low = null, discrimination = null;
+
+        if (filtered.length >= 6) {
+
+            const sorted = [...filtered].sort(
+                (a, b) => Number(b.score) - Number(a.score)
+            );
+
+            const k = Math.max(1, Math.round(sorted.length * 0.27));
+
+            const rateOf = group => {
+                const hit = group.filter(student =>
+                    String(
+                        (student.answers || [])[index] || ""
+                    ).trim().toUpperCase() === correct
+                ).length;
+                return hit / group.length;
+            };
+
+            high = { rate: rateOf(sorted.slice(0, k)), n: k };
+            low = { rate: rateOf(sorted.slice(-k)), n: k };
+            discrimination = high.rate - low.rate;
+        }
+
+        return {
+            number: index + 1,
+            title: question.title || "",
+            correct,
+            counts,
+            total,
+            unanswered: filtered.length - total,
+            correctCount,
+            rate,
+            wrongLetter,
+            wrongCount,
+            high,
+            low,
+            discrimination
+        };
+    },
+
+
+    /* ---------------------------------------------
        題目分析（依篩選結果）
     --------------------------------------------- */
 
@@ -512,22 +610,55 @@ const Reports = {
 
         this.state.questions.forEach((question, index) => {
 
-            const number = index + 1;
+            const st = this.questionStats(index, filtered);
             const choices = QUESTION_CHOICES[index] || [];
 
-            const counts =
-                Dashboard.calculateQuestionCounts(index, filtered);
-
-            const total = Object.values(counts)
-                .reduce((sum, value) => sum + value, 0);
-
-            const correct = String(question.answer || "")
-                .trim().toUpperCase();
-
-            const correctCount = counts[correct] || 0;
-
             const percent = value =>
-                total ? Math.round((value / total) * 100) : 0;
+                st.total ? Math.round((value / st.total) * 100) : 0;
+
+            const diff = this.difficultyLabel(st.rate);
+
+            const chips = [
+                `<span class="detail-chip difficulty-${diff.cls}">
+                    難度：${diff.text}
+                </span>`
+            ];
+
+            if (st.discrimination === null) {
+                chips.push(`<span class="detail-chip">
+                    高低分組分析：人數不足（需至少 6 人）
+                </span>`);
+            } else {
+                chips.push(`
+                    <span class="detail-chip">
+                        高分組答對率
+                        ${Math.round(st.high.rate * 100)}%
+                        （${st.high.n} 人）
+                    </span>
+                    <span class="detail-chip">
+                        低分組答對率
+                        ${Math.round(st.low.rate * 100)}%
+                        （${st.low.n} 人）
+                    </span>
+                    <span class="detail-chip">
+                        鑑別度 ${st.discrimination.toFixed(2)}
+                        （${this.discriminationLabel(st.discrimination)}）
+                    </span>
+                `);
+            }
+
+            chips.push(
+                st.wrongLetter
+                    ? `<span class="detail-chip">
+                        最常見錯誤選項：${st.wrongLetter}
+                        （${st.wrongCount} 人）
+                    </span>`
+                    : `<span class="detail-chip">最常見錯誤選項：無</span>`
+            );
+
+            chips.push(
+                `<span class="detail-chip">未作答 ${st.unanswered} 人</span>`
+            );
 
             const card = document.createElement("article");
             card.className = "question-analysis-card";
@@ -537,25 +668,29 @@ const Reports = {
                 <div class="question-analysis-header">
 
                     <div class="question-heading">
-                        <div class="question-number">Q${number}</div>
-                        <h3>${esc(question.title || "")}</h3>
+                        <div class="question-number">Q${st.number}</div>
+                        <h3>${esc(st.title)}</h3>
                     </div>
 
                     <div class="question-answer">
                         正確答案：
-                        <strong>${esc(question.answer || "-")}</strong>
+                        <strong>${esc(st.correct || "-")}</strong>
                         <small class="question-rate">
-                            答對率: ${correctCount}/${total} 人
-                            (${percent(correctCount)}%)
+                            答對率: ${st.correctCount}/${st.total} 人
+                            (${percent(st.correctCount)}%)
                         </small>
                     </div>
 
                 </div>
 
+                <div class="question-detail-strip">
+                    ${chips.join("")}
+                </div>
+
                 <div class="question-analysis-body">
 
                     <div class="question-chart-wrapper">
-                        <canvas id="reportQuestionChart-${number}"></canvas>
+                        <canvas id="reportQuestionChart-${st.number}"></canvas>
                     </div>
 
                     <div class="question-options">
@@ -569,7 +704,8 @@ const Reports = {
 
                             return `
                                 <div class="option-description ${
-                                    letter === correct ? "correct-option" : ""
+                                    letter === st.correct
+                                        ? "correct-option" : ""
                                 }">
                                     <span class="option-letter">${letter}</span>
                                     <div class="option-body">
@@ -577,8 +713,8 @@ const Reports = {
                                             ${esc(choice)}
                                         </span>
                                         <div class="option-stat">
-                                            選擇 ${counts[letter] || 0} 人
-                                            (${percent(counts[letter] || 0)}%)
+                                            選擇 ${st.counts[letter] || 0} 人
+                                            (${percent(st.counts[letter] || 0)}%)
                                         </div>
                                     </div>
                                 </div>
@@ -595,13 +731,242 @@ const Reports = {
 
             if (typeof window.renderQuestionBarChart === "function") {
                 window.renderQuestionBarChart(
-                    `reportQuestionChart-${number}`,
-                    counts
+                    `reportQuestionChart-${st.number}`,
+                    st.counts
                 );
             }
         });
+    },
+
+
+    /* ---------------------------------------------
+       總結
+    --------------------------------------------- */
+
+    median(values) {
+
+        if (!values.length) return null;
+
+        const sorted = [...values].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+
+        return sorted.length % 2
+            ? sorted[mid]
+            : (sorted[mid - 1] + sorted[mid]) / 2;
+    },
+
+    stdDev(values) {
+
+        if (values.length < 2) return null;
+
+        const mean = values.reduce((a, b) => a + b, 0) / values.length;
+
+        const variance = values.reduce(
+            (sum, v) => sum + (v - mean) ** 2, 0
+        ) / values.length;
+
+        return Math.sqrt(variance);
+    },
+
+    /* 依欄位（小組 / 班級）算各組平均，回傳由高到低排序 */
+    averageBy(filtered, field, fallback) {
+
+        const map = new Map();
+
+        filtered.forEach(student => {
+            const key = student[field] || fallback;
+            const score = Number(student.score);
+            if (Number.isNaN(score)) return;
+
+            if (!map.has(key)) map.set(key, []);
+            map.get(key).push(score);
+        });
+
+        return [...map.entries()]
+            .map(([name, scores]) => ({
+                name,
+                n: scores.length,
+                avg: scores.reduce((a, b) => a + b, 0) / scores.length
+            }))
+            .sort((a, b) => b.avg - a.avg);
+    },
+
+    renderSummary(filtered) {
+
+        const container = document.getElementById("report-summary");
+        if (!container) return;
+
+        const esc = value => Dashboard.escapeHTML(value);
+
+        if (!filtered.length) {
+            container.innerHTML =
+                '<div class="empty-state">沒有符合條件的測驗者</div>';
+            return;
+        }
+
+        const scores = filtered
+            .map(s => Number(s.score))
+            .filter(n => !Number.isNaN(n));
+
+        const avg = this.average(filtered);
+        const med = this.median(scores);
+        const sd = this.stdDev(scores);
+        const max = Math.max(...scores);
+        const min = Math.min(...scores);
+
+        const scope =
+            (this.state.group === "all" ? "所有小組" : this.state.group) +
+            " / " +
+            (this.state.className === "all" ? "所有班級" : this.state.className);
+
+        const stats = this.state.questions.map(
+            (_, index) => this.questionStats(index, filtered)
+        );
+
+        const byRate = [...stats].sort((a, b) => a.rate - b.rate);
+        const hardest = byRate.slice(0, 3);
+        const easiest = [...byRate].reverse().slice(0, 3);
+
+        const qText = list => list.map(
+            q => `Q${q.number}（${Math.round(q.rate)}%）`
+        ).join("、");
+
+        const lowRate = stats
+            .filter(q => q.rate < 50)
+            .map(q => `Q${q.number}`);
+
+        const lowDisc = stats
+            .filter(q => q.discrimination !== null && q.discrimination < 0.2)
+            .map(q => `Q${q.number}`);
+
+        /* 最常見迷思：錯誤選項被選最多的題目 */
+        const trap = [...stats]
+            .filter(q => q.wrongLetter)
+            .sort((a, b) => b.wrongCount - a.wrongCount)[0];
+
+        const items = [];
+
+        items.push(`
+            <li>
+                <strong>整體表現：</strong>
+                統計範圍為「${esc(scope)}」，共 ${filtered.length} 人，
+                平均 ${avg.toFixed(2)} 分，中位數 ${med} 分，
+                ${sd === null ? "" : `標準差 ${sd.toFixed(2)}，`}
+                最高 ${max} 分、最低 ${min} 分。
+            </li>
+        `);
+
+        if (hardest.length) {
+            items.push(`
+                <li>
+                    <strong>最需加強的題目：</strong>
+                    ${qText(hardest)}。
+                </li>
+                <li>
+                    <strong>表現最好的題目：</strong>
+                    ${qText(easiest)}。
+                </li>
+            `);
+        }
+
+        items.push(`
+            <li>
+                <strong>答對率低於 50% 的題目：</strong>
+                ${lowRate.length
+                    ? `${lowRate.join("、")}，建議優先複習。`
+                    : "沒有，各題答對率都在 50% 以上。"}
+            </li>
+        `);
+
+        if (filtered.length >= 6) {
+            items.push(`
+                <li>
+                    <strong>鑑別度偏低（低於 0.20）的題目：</strong>
+                    ${lowDisc.length
+                        ? `${lowDisc.join("、")}，高低分組差異不大，可檢視題目或選項是否需要調整。`
+                        : "沒有，各題都能區分高低分組。"}
+                </li>
+            `);
+        }
+
+        if (trap) {
+            items.push(`
+                <li>
+                    <strong>最明顯的迷思：</strong>
+                    Q${trap.number} 有 ${trap.wrongCount} 人選了錯誤選項
+                    ${trap.wrongLetter}（正確答案為 ${esc(trap.correct)}）。
+                </li>
+            `);
+        }
+
+        const groupRank = this.averageBy(filtered, "group", "未分組");
+        const classRank = this.averageBy(filtered, "class", "未填班級");
+
+        const rankText = (rank, label) => {
+
+            if (rank.length < 2) return "";
+
+            const top = rank[0];
+            const bottom = rank[rank.length - 1];
+
+            return `
+                <li>
+                    <strong>${label}比較：</strong>
+                    平均最高為 ${esc(top.name)}
+                    （${top.avg.toFixed(2)} 分，${top.n} 人），
+                    最低為 ${esc(bottom.name)}
+                    （${bottom.avg.toFixed(2)} 分，${bottom.n} 人），
+                    相差 ${(top.avg - bottom.avg).toFixed(2)} 分。
+                </li>
+            `;
+        };
+
+        items.push(rankText(groupRank, "小組"));
+        items.push(rankText(classRank, "班級"));
+
+        container.innerHTML = `
+            <article class="dashboard-card report-summary-card">
+                <ul class="report-summary-list">
+                    ${items.join("")}
+                </ul>
+                <p class="report-summary-note">
+                    難度：答對率 80% 以上為容易、50–79% 為中等、
+                    30–49% 為偏難、30% 以下為困難。
+                    鑑別度＝高分組（前 27%）答對率 − 低分組（後 27%）答對率。
+                </p>
+            </article>
+        `;
+    },
+
+
+    /* ---------------------------------------------
+       下載 PDF（開啟列印視窗，目的地選「另存為 PDF」）
+    --------------------------------------------- */
+
+    downloadPDF() {
+
+        const originalTitle = document.title;
+
+        const group =
+            this.state.group === "all" ? "所有小組" : this.state.group;
+        const className =
+            this.state.className === "all" ? "所有班級" : this.state.className;
+
+        document.title = `測驗報告_${group}_${className}`;
+
+        document.body.classList.add("printing-report");
+
+        const restore = () => {
+            document.body.classList.remove("printing-report");
+            document.title = originalTitle;
+            window.removeEventListener("afterprint", restore);
+        };
+
+        window.addEventListener("afterprint", restore);
+
+        /* 等圖表依列印寬度重畫完再開列印視窗 */
+        setTimeout(() => window.print(), 500);
     }
 };
 
 window.Reports = Reports;
-                                 
