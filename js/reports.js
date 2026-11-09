@@ -157,6 +157,14 @@ const Reports = {
        RENDER
     --------------------------------------------- */
 
+    /* 切換到報告頁時呼叫：頁面可見後再重畫，圖表才有正確尺寸 */
+    onShow() {
+
+        requestAnimationFrame(() => {
+            if (this.state.students.length) this.render();
+        });
+    },
+
     render() {
 
         const filtered = this.getFilteredStudents();
@@ -249,6 +257,19 @@ const Reports = {
 
         canvas.style.visibility = isEmpty ? "hidden" : "visible";
         if (empty) empty.hidden = !isEmpty;
+
+        /* y 軸標題：與分析頁相同，「人」「數」直立排列、文字不旋轉 */
+        let yTitle = wrapper.querySelector(".question-y-axis-title");
+
+        if (!yTitle) {
+            yTitle = document.createElement("div");
+            yTitle.className = "question-y-axis-title";
+            yTitle.innerHTML = "<span>人</span><span>數</span>";
+            wrapper.style.position = "relative";
+            wrapper.appendChild(yTitle);
+        }
+
+        yTitle.style.display = isEmpty ? "none" : "";
     },
 
 
@@ -264,6 +285,26 @@ const Reports = {
         if (!canvas || typeof window.loadChartJS !== "function") return;
 
         this.toggleEmpty(canvasId, !filtered.length);
+
+        /* 小字：最高 / 最低 / 全距 */
+        const scoreValues = filtered
+            .map(student => Number(student.score))
+            .filter(value => !Number.isNaN(value));
+
+        if (scoreValues.length) {
+            const high = Math.max(...scoreValues);
+            const low = Math.min(...scoreValues);
+
+            this.setText(
+                "report-score-range",
+                `最高 ${high} 分　最低 ${low} 分　全距 ${high - low} 分`
+            );
+        } else {
+            this.setText(
+                "report-score-range",
+                "最高 -　最低 -　全距 -"
+            );
+        }
 
         const Chart = await window.loadChartJS();
 
@@ -343,7 +384,7 @@ const Reports = {
                         title: {
                             display: true,
                             text: "分數（每 2 分一格）",
-                            color: colors.muted,
+                            color: colors.text,
                             font: { size: this.fontSize() }
                         }
                     },
@@ -356,12 +397,7 @@ const Reports = {
                             stepSize: 1,
                             font: { size: this.fontSize() }
                         },
-                        title: {
-                            display: true,
-                            text: "人數",
-                            color: colors.muted,
-                            font: { size: this.fontSize() }
-                        }
+                        title: { display: false }
                     }
                 }
             }
@@ -402,9 +438,53 @@ const Reports = {
             filtered.filter(s => (s.group || "未分組") === group).length
         );
 
+        /* 班級顏色（折線與長條混色共用） */
+        const classColor = {};
+        classes.forEach((className, index) => {
+            classColor[className] =
+                this.PALETTE[index % this.PALETTE.length];
+        });
+
+        const hexToRgb = hex => [
+            parseInt(hex.slice(1, 3), 16),
+            parseInt(hex.slice(3, 5), 16),
+            parseInt(hex.slice(5, 7), 16)
+        ];
+
+        /* 各小組的長條顏色 = 組內各班級顏色依人數加權混合 */
+        const mixed = groups.map(group => {
+
+            const members = filtered.filter(
+                s => (s.group || "未分組") === group
+            );
+
+            const sum = [0, 0, 0];
+
+            members.forEach(student => {
+                const rgb = hexToRgb(
+                    classColor[student.class || "未填班級"]
+                );
+                sum[0] += rgb[0];
+                sum[1] += rgb[1];
+                sum[2] += rgb[2];
+            });
+
+            const n = members.length || 1;
+
+            return sum.map(value => Math.round(value / n));
+        });
+
+        const barFill = mixed.map(
+            rgb => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.28)`
+        );
+
+        const barBorder = mixed.map(
+            rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
+        );
+
         const classDatasets = classes.map((className, index) => {
 
-            const color = this.PALETTE[index % this.PALETTE.length];
+            const color = classColor[className];
 
             return {
                 type: "line",
@@ -443,8 +523,8 @@ const Reports = {
                         label: "小組總人數",
                         order: 2,
                         data: groupTotals,
-                        backgroundColor: "rgba(79, 70, 229, 0.28)",
-                        borderColor: "#4f46e5",
+                        backgroundColor: barFill,
+                        borderColor: barBorder,
                         borderWidth: 1,
                         borderRadius: 6
                     },
@@ -465,7 +545,8 @@ const Reports = {
                             color: colors.text,
                             boxWidth: 12,
                             usePointStyle: true,
-                            font: { size: this.fontSize() }
+                            font: { size: this.fontSize() },
+                            filter: item => item.datasetIndex !== 0
                         }
                     },
                     tooltip: {
@@ -487,7 +568,7 @@ const Reports = {
                         title: {
                             display: true,
                             text: "小組",
-                            color: colors.muted,
+                            color: colors.text,
                             font: { size: this.fontSize() }
                         }
                     },
@@ -500,12 +581,7 @@ const Reports = {
                             stepSize: 1,
                             font: { size: this.fontSize() }
                         },
-                        title: {
-                            display: true,
-                            text: "人數",
-                            color: colors.muted,
-                            font: { size: this.fontSize() }
-                        }
+                        title: { display: false }
                     }
                 }
             }
@@ -737,7 +813,7 @@ const Reports = {
                         title: {
                             display: true,
                             text: "AI",
-                            color: colors.muted,
+                            color: colors.text,
                             font: { size }
                         }
                     },
@@ -750,12 +826,7 @@ const Reports = {
                             stepSize: 1,
                             font: { size }
                         },
-                        title: {
-                            display: true,
-                            text: "人數",
-                            color: colors.muted,
-                            font: { size }
-                        }
+                        title: { display: false }
                     }
                 }
             }
